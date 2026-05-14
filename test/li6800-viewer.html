@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LI-6800 光合仪数据查看器 · 通用版</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1b2a;color:#d0dbe8;font-family:'Segoe UI','Microsoft YaHei',sans-serif;min-height:100vh;overflow-y:auto}
+header{background:#101e2e;border-bottom:1px solid #1e3a5f;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:10}
+header h1{font-size:18px;color:#fff;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.upload-zone{display:flex;align-items:center;gap:8px}
+.upload-btn{background:#1a6dd4;color:#fff;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:background .2s;white-space:nowrap}
+.upload-btn:hover{background:#2080f0}
+.upload-btn.reset{background:#3a4a5a}
+.upload-btn.reset:hover{background:#4a5a6a}
+#fileInput{display:none}
+.file-name{font-size:11px;color:#7895b4;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.info-bar{display:flex;gap:8px;flex-wrap:wrap;padding:8px 20px;background:#0f1e30;border-bottom:1px solid #1a2f45}
+.info-pill{background:#152238;border:1px solid #234060;border-radius:14px;padding:3px 10px;font-size:11px;color:#8ba5c0}
+.info-pill b{color:#d0dbe8}
+.info-pill.warn{background:#2a1a1a;border-color:#5a2a2a;color:#ff9f9f}
+.container{padding:12px 16px}
+.tabs{display:flex;gap:3px;margin-bottom:12px;flex-wrap:wrap}
+.tab{background:#142133;border:1px solid #1e3350;color:#7895b4;padding:6px 14px;border-radius:5px 5px 0 0;cursor:pointer;font-size:12px;transition:all .2s;user-select:none}
+.tab.active,.tab:hover{background:#1a3458;color:#fff;border-color:#2a5080}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(540px,1fr));gap:12px}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card{background:#132030;border-radius:10px;padding:12px;border:1px solid #1d334d}
+.card h3{font-size:13px;margin-bottom:4px;color:#bccfdf;font-weight:500}
+.chart{width:100%;height:310px}
+.chart-sm{height:260px}
+.chart-lg{height:380px}
+.empty-state{text-align:center;padding:60px 20px;color:#587694}
+.empty-state .icon{font-size:56px;margin-bottom:12px}
+.empty-state h2{font-size:18px;margin-bottom:6px;color:#8ba5c0}
+.empty-state p{font-size:13px;color:#587694;margin-bottom:16px}
+.drop-zone{border:2px dashed #234060;border-radius:12px;padding:30px;text-align:center;cursor:pointer;transition:all .3s;margin:16px 0}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#1a6dd4;background:#112238}
+.drop-zone p{font-size:13px;color:#587694}
+.footer{text-align:center;padding:10px;font-size:10px;color:#456a8a}
+/* raw table */
+.raw-wrap{overflow-x:auto;background:#132030;border-radius:10px;border:1px solid #1d334d}
+.raw-toolbar{padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1px solid #1d334d}
+.raw-toolbar span{font-size:12px;color:#8ba5c0}
+.raw-toolbar input,.raw-toolbar select{background:#0d1b2a;border:1px solid #234060;color:#d0dbe8;padding:4px 8px;border-radius:4px;font-size:11px}
+.raw-toolbar input{width:180px}
+.raw-scroll{max-height:440px;overflow:auto}
+.raw-scroll table{border-collapse:collapse;font-size:10px;width:max-content;min-width:100%}
+.raw-scroll th{background:#152238;padding:3px 6px;border:1px solid #1d334d;color:#8ba5c0;white-space:nowrap;position:sticky;top:0;z-index:1}
+.raw-scroll td{padding:2px 6px;border:1px solid #152238;color:#c0d0e0;text-align:right;white-space:nowrap}
+.raw-scroll tr:nth-child(even) td{background:#0f1b2a}
+.raw-scroll td.col-number{color:#587694;text-align:right;font-size:9px}
+/* stats table */
+.stats-wrap{overflow-x:auto}
+.stats-tbl{border-collapse:collapse;width:100%;font-size:12px;margin:8px 0}
+.stats-tbl th{background:#152238;padding:6px 10px;border:1px solid #1d334d;color:#8ba5c0;text-align:center;white-space:nowrap;font-weight:500}
+.stats-tbl td{padding:5px 10px;border:1px solid #152238;color:#d0dbe8;text-align:center;white-space:nowrap}
+.stats-tbl .outlier{background:#3a1a1a!important;color:#ff6b6b!important}
+.stats-tbl .param-name{text-align:left;color:#00d2ff;font-weight:600}
+.export-btn{background:#1a6dd4;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;margin:4px 4px 4px 0;transition:background .2s}
+.export-btn:hover{background:#2080f0}
+.export-btn.green{background:#0d8a4c}
+.export-btn.green:hover{background:#10a85c}
+.aq-result{background:#152238;border:1px solid #1e5a3a;border-radius:8px;padding:14px;margin:8px 0;font-size:12px;line-height:1.8}
+.aq-result b{color:#00d2ff}
+.aq-result .param{display:inline-block;margin:4px 16px 4px 0}
+.aq-result .val{color:#2ed573;font-weight:bold}
+.aq-result .ci{color:#8ba5c0;font-size:11px}
+.aq-result .warn{color:#ff6b6b}
+.chart-outlier{color:#ff6b6b!important;font-weight:bold}
+.obs-src{font-size:11px;color:#587694;margin-left:6px}
+.section-title{font-size:14px;color:#fff;margin:16px 0 8px;padding-left:8px;border-left:3px solid #1a6dd4}
+</style>
+</head>
+<body>
+<header>
+<h1>🌿 LI-6800 光合仪数据查看器</h1>
+<div class="upload-zone">
+<button class="upload-btn reset" onclick="resetAll()" id="resetBtn" style="display:none">✕ 关闭</button>
+<button class="upload-btn" onclick="document.getElementById('fileInput').click()">📂 打开 Excel 文件</button>
+<input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this)">
+<span class="file-name" id="fileName"></span>
+</div>
+</header>
+<div class="info-bar" id="infoBar"></div>
+
+<div class="container">
+<div id="emptyState" class="empty-state">
+<div class="icon">📊</div>
+<h2>LI-6800 光合仪数据通用查看器</h2>
+<p>支持 LI-6800 导出的 .xlsx 日志文件，浏览器端自动解析并生成交互式图表</p>
+<div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+<p>📁 拖放 Excel 文件到此处，或点击选择</p>
+<p style="font-size:10px;margin-top:6px;color:#456a8a">.xlsx / .xls · 所有解析在本地完成，文件不会上传</p>
+</div>
+</div>
+
+<div id="mainContent" style="display:none">
+<div class="tabs" id="tabs">
+<div class="tab active" data-tab="overview">📋 总览</div>
+<div class="tab" data-tab="gas">🌬️ 气体交换</div>
+<div class="tab" data-tab="env">🌡️ 环境参数</div>
+<div class="tab" data-tab="flr">💡 荧光测量</div>
+<div class="tab" data-tab="light">🌞 光响应分析</div>
+<div class="tab" data-tab="stab">📏 稳定性</div>
+<div class="tab" data-tab="diag">🔧 诊断数据</div>
+<div class="tab" data-tab="stats">📊 定量分析</div>
+<div class="tab" data-tab="raw">📋 原始数据表</div>
+</div>
+
+<div class="tab-content active" id="tab-overview">
+<div class="grid">
+<div class="card"><h3>CO₂ 浓度趋势 (μmol/mol)</h3><div id="chart-co2" class="chart"></div></div>
+<div class="card"><h3>H₂O 浓度趋势 (mmol/mol)</h3><div id="chart-h2o" class="chart"></div></div>
+<div class="card"><h3>温度变化 (°C)</h3><div id="chart-temp" class="chart"></div></div>
+<div class="card"><h3>流速 & 压力</h3><div id="chart-flow" class="chart"></div></div>
+<div class="card"><h3>光合 & 蒸腾速率</h3><div id="chart-gas" style="height:300px"></div></div>
+<div class="card"><h3>光合有效辐射 PAR (μmol·m⁻²·s⁻¹)</h3><div id="chart-flr-overview" style="height:300px"></div></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-gas">
+<div class="grid">
+<div class="card"><h3>CO₂ 参比/样品浓度 & ΔCO₂</h3><div id="chart-gas-co2" class="chart"></div></div>
+<div class="card"><h3>H₂O 参比/样品浓度 & ΔH₂O</h3><div id="chart-gas-h2o" class="chart"></div></div>
+<div class="card"><h3>光合速率 A & 蒸腾速率 E & PAR</h3><div id="chart-gas-ae" class="chart"></div></div>
+<div class="card"><h3>胞间CO₂ Ci & 气孔导度 gsw & VPD</h3><div id="chart-gas-ci" class="chart"></div></div>
+<div class="card"><h3>Rabs(吸收辐射) & 热通量</h3><div id="chart-gas-energy" class="chart"></div></div>
+<div class="card"><h3>光强 Q & 光合 A 对比</h3><div id="chart-gas-aq" style="height:310px"></div></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-env">
+<div class="grid">
+<div class="card"><h3>温度详情 (Tleaf, Tair, Tleaf2)</h3><div id="chart-env-temp" class="chart"></div></div>
+<div class="card"><h3>叶室湿度 & VPD</h3><div id="chart-env-rh" class="chart"></div></div>
+<div class="card"><h3>流速、压力、风扇转速</h3><div id="chart-env-flow" class="chart"></div></div>
+<div class="card"><h3>控制台环境</h3><div id="chart-env-console" class="chart"></div></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-flr">
+<div class="grid">
+<div class="card"><h3>光强 Q & 光质比例</h3><div id="chart-flr-q" class="chart"></div></div>
+<div class="card"><h3>荧光信号 F & F_dc</h3><div id="chart-flr-f" class="chart"></div></div>
+<div class="card"><h3>LED 温度诊断</h3><div id="chart-flr-temp" style="height:300px"></div></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-light">
+<div class="grid">
+<div class="card"><h3>光合有效辐射 PAR (μmol·m⁻²·s⁻¹)</h3><div id="chart-light-par" class="chart"></div></div>
+<div class="card"><h3>光合速率 A × 光强 Q (A-Q 曲线)</h3><div id="chart-light-aq" class="chart"></div></div>
+<div class="card"><h3>光质组分 (红光/蓝光/远红光)</h3><div id="chart-light-spec" class="chart"></div></div>
+<div class="card"><h3>光合速率 A & 气孔导度 gsw</h3><div id="chart-light-ags" class="chart"></div></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-stab">
+<div class="grid">
+<div class="card"><h3>ΔCO₂ 稳定性指标</h3><div id="chart-stab-co2" class="chart"></div></div>
+<div class="card"><h3>ΔH₂O 稳定性指标</h3><div id="chart-stab-h2o" class="chart"></div></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-diag">
+<div class="grid grid-3">
+<div class="card"><h3>LED 组件温度</h3><div id="chart-diag-led" class="chart-sm"></div></div>
+<div class="card"><h3>匹配阀状态</h3><div id="chart-diag-match" class="chart-sm"></div></div>
+<div class="card"><h3>泵/流量控制</h3><div id="chart-diag-pump" class="chart-sm"></div></div>
+<div class="card"><h3>红外分析器信号</h3><div id="chart-diag-irga" class="chart-sm"></div></div>
+<div class="card"><h3>吸收率 (absorptance)</h3><div id="chart-diag-abs" class="chart-sm"></div></div>
+<div class="card"><h3>流量信号</h3><div id="chart-diag-flowv" class="chart-sm"></div></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-stats">
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+  <button class="export-btn green" onclick="exportStatsCSV()">📥 导出统计报告 CSV</button>
+  <button class="export-btn" onclick="exportChartDataCSV()">📥 导出全部图表数据 CSV</button>
+  <button class="export-btn" onclick="exportOutliersCSV()">⚠ 导出异常值清单 CSV</button>
+</div>
+<div class="grid">
+<div class="card"><h3>📋 核心参数统计摘要</h3><div class="stats-wrap" id="statsTable"></div></div>
+<div class="card">
+  <h3>🌞 光响应曲线拟合 (A-Q Model)</h3>
+  <div id="chart-aqfit" style="height:340px"></div>
+  <div class="aq-result" id="aqFitResult"></div>
+</div>
+<div class="card"><h3>⚠ 异常值检测报告</h3><div class="stats-wrap" id="outlierTable"></div></div>
+<div class="card"><h3>📌 异常值位置索引 (可溯源原始文件)</h3><div class="stats-wrap" id="outlierIndex"></div></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-raw">
+<div class="raw-wrap">
+<div class="raw-toolbar">
+<span>共 <b id="rawRowCount">0</b> 行 · <b id="rawColCount">0</b> 列</span>
+<div style="display:flex;gap:6px;align-items:center">
+<input id="rawSearch" placeholder="搜索列名..." oninput="renderRawTable()">
+<select id="rawPageSize" onchange="renderRawTable()">
+<option value="50">50</option><option value="100" selected>100</option><option value="200">200</option><option value="500">500</option><option value="0">全部</option>
+</select>
+</div>
+</div>
+<div class="raw-scroll" id="rawTable"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">LI-6800 Data Viewer · 通用版 · 浏览器本地解析，数据安全</div>
+
+<script>
+let parsedData=null;
+let allCharts=[];
+let renderedTabs={};
+
+function fmtTime(v){if(v==null)return'';const m=Math.floor(v/60);const s=Math.floor(v%60);return m+':'+String(s).padStart(2,'0')}
+const COLORS=['#00d2ff','#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd','#01a3a4','#f368e0','#2ed573','#ff9f43','#ee5a24'];
+
+// ██████  TAB SWITCHING  ██████
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('active',t.id==='tab-'+name));
+  if(name==='raw')renderRawTable();
+  if(!renderedTabs[name]){renderedTabs[name]=true;renderTab(name)}
+  requestAnimationFrame(()=>allCharts.forEach(c=>{try{c.resize()}catch(e){}}));
+}
+
+function renderTab(name){
+  switch(name){
+    case 'overview':renderOverview();break;
+    case 'gas':renderGas();break;
+    case 'env':renderEnv();break;
+    case 'flr':renderFlr();break;
+    case 'light':renderLight();break;
+    case 'stab':renderStab();break;
+    case 'diag':renderDiag();break;
+    case 'stats':renderStats();break;
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+});
+
+// ██████  DRAG & DROP  ██████
+(function(){
+  const dz=document.getElementById('dropZone');
+  if(!dz)return;
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag-over')}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('drag-over')}));
+  dz.addEventListener('drop',e=>{
+    const file=e.dataTransfer.files[0];
+    if(file)processFile(file);
+  });
+  document.addEventListener('dragover',e=>e.preventDefault());
+  document.addEventListener('drop',e=>{
+    e.preventDefault();
+    const file=e.dataTransfer.files[0];
+    if(file&&!e.target.closest('#dropZone'))processFile(file);
+  });
+})();
+
+// ██████  NORMALIZE UNICODE VARIANTS  ██████
+const UNICODE_MAP={
+  '\u0394':'Δ','\u2206':'Δ','\u03b1':'α','\u0393':'α',
+  '\u2082':'₂','\u2080':'₀','\u207b':'⁻','\u00b2':'²','\u00b3':'³'
+};
+function normalizeStr(s){
+  if(!s)return'';
+  let r=String(s).trim();
+  for(const[k,v]of Object.entries(UNICODE_MAP))r=r.replace(new RegExp(k,'g'),v);
+  return r;
+}
+
+// ██████  COLUMN MATCHING  ██████
+const ALIAS_MAP={};
+function regAlias(key,aliases){ALIAS_MAP[key]=aliases.map(normalizeStr)}
+regAlias('obs',['obs']);
+regAlias('time',['time']);
+regAlias('elapsed',['elapsed']);
+regAlias('date',['date']);
+regAlias('hhmmss',['hhmmss']);
+regAlias('TIME',['TIME']);
+regAlias('A',['A','Photo','Adyn']);
+regAlias('E',['E','Emm']);
+regAlias('Ca',['Ca']);
+regAlias('Ci',['Ci']);
+regAlias('gsw',['gsw']);
+regAlias('VPDleaf',['VPDleaf']);
+regAlias('Rabs',['Rabs']);
+regAlias('LatHFlux',['LatHFlux']);
+regAlias('SenHFlux',['SenHFlux']);
+regAlias('NetTherm',['NetTherm']);
+regAlias('CO2_s',['CO2_s','CO₂_s','CO2 s']);
+regAlias('CO2_r',['CO2_r','CO₂_r','CO2 r']);
+regAlias('CO2_s_d',['CO2_s_d','CO₂_s_d']);
+regAlias('CO2_r_d',['CO2_r_d','CO₂_r_d']);
+regAlias('ΔCO2',['ΔCO2','ΔCO₂','dCO2','CO2','CO₂']);
+regAlias('H2O_s',['H2O_s','H₂O_s','H2O s']);
+regAlias('H2O_r',['H2O_r','H₂O_r','H2O r']);
+regAlias('ΔH2O',['ΔH2O','ΔH₂O','dH2O','H2O','H₂O']);
+regAlias('Flow',['Flow']);
+regAlias('Pa',['Pa']);
+regAlias('ΔPcham',['ΔPcham','dPcham','Pcham']);
+regAlias('Tair',['Tair']);
+regAlias('Tleaf',['Tleaf']);
+regAlias('Tleaf2',['Tleaf2']);
+regAlias('RHcham',['RHcham']);
+regAlias('Fan_speed',['Fan_speed','Fan speed']);
+regAlias('Qamb_in',['Qamb_in']);
+regAlias('Q',['Q']);
+regAlias('Qin',['Qin']);
+regAlias('Qabs',['Qabs']);
+regAlias('Qamb_out',['Qamb_out']);
+regAlias('f_red',['f_red','f red']);
+regAlias('f_blue',['f_blue','f blue']);
+regAlias('f_farred',['f_farred','f farred']);
+regAlias('F',['F']);
+regAlias('F_dc',['F_dc']);
+regAlias('Q_red',['Q_red']);
+regAlias('Q_blue',['Q_blue']);
+regAlias('Q_farred',['Q_farred']);
+regAlias('Tled',['Tled']);
+regAlias('TDigital',['TDigital']);
+regAlias('TPreamp',['TPreamp']);
+regAlias('TPwrSpy',['TPwrSpy']);
+regAlias('TDrive',['TDrive']);
+regAlias('Console_RH',['Console_RH','Console RH']);
+regAlias('Console_T',['Console_T','Console T']);
+regAlias('Console_H2O',['Console_H2O','Console H2O']);
+regAlias('ΔCO2:MN',['ΔCO2:MN','CO2:MN','ΔCO₂:MN']);
+regAlias('ΔCO2:SLP',['ΔCO2:SLP','CO2:SLP','ΔCO₂:SLP']);
+regAlias('ΔCO2:SD',['ΔCO2:SD','CO2:SD','ΔCO₂:SD']);
+regAlias('ΔCO2:OK',['ΔCO2:OK','CO2:OK','ΔCO₂:OK']);
+regAlias('ΔH2O:MN',['ΔH2O:MN','H2O:MN','ΔH₂O:MN']);
+regAlias('ΔH2O:SLP',['ΔH2O:SLP','H2O:SLP','ΔH₂O:SLP']);
+regAlias('ΔH2O:SD',['ΔH2O:SD','H2O:SD','ΔH₂O:SD']);
+regAlias('ΔH2O:OK',['ΔH2O:OK','H2O:OK','ΔH₂O:OK']);
+regAlias('Stable',['Stable']);
+regAlias('Total',['Total']);
+regAlias('State',['State']);
+regAlias('co2_cv',['co2_cv']);
+regAlias('h2o_cv',['h2o_cv']);
+regAlias('Vflow',['Vflow']);
+regAlias('VPchamber',['VPchamber']);
+regAlias('abs_c_a',['abs_c_a']);
+regAlias('abs_c_b',['abs_c_b']);
+regAlias('abs_h_a',['abs_h_a']);
+regAlias('abs_h_b',['abs_h_b']);
+regAlias('Wc_s',['Wc_s']);
+regAlias('Wc_r',['Wc_r']);
+regAlias('Wco_s',['Wco_s']);
+regAlias('Wco_r',['Wco_r']);
+regAlias('Ww_s',['Ww_s']);
+regAlias('Ww_r',['Ww_r']);
+regAlias('Flow_s_v',['Flow_s_v']);
+regAlias('Flow_r_v',['Flow_r_v']);
+regAlias('MatchCO2',['MatchCO2']);
+regAlias('MatchH2O',['MatchH2O']);
+regAlias('MatchValveR',['MatchValveR']);
+regAlias('MatchValveS',['MatchValveS']);
+regAlias('Pump',['Pump']);
+regAlias('Fan_%',['Fan_%','Fan %']);
+regAlias('Flow_%',['Flow_%','Flow %']);
+regAlias('CO2_%',['CO2_%','CO2 %']);
+regAlias('Ts',['Ts']);
+regAlias('Tr',['Tr']);
+regAlias('Txchg',['Txchg']);
+regAlias('Tirga',['Tirga']);
+regAlias('Tchopper',['Tchopper']);
+regAlias('Tboard',['Tboard']);
+regAlias('V_system',['V_system']);
+regAlias('CO2_f',['CO2_f']);
+regAlias('CO2_f_s',['CO2_f_s']);
+regAlias('Pump_f',['Pump_f']);
+regAlias('Pump_f_s',['Pump_f_s']);
+regAlias('Pump_p',['Pump_p']);
+regAlias('Pump_p_s',['Pump_p_s']);
+regAlias('DIAG',['DIAG']);
+regAlias('SS_s',['SS_s']);
+regAlias('SS_r',['SS_r']);
+
+let _colColMap={};
+function colIdx(key){
+  if(!parsedData)return undefined;
+  if(_colColMap[key]!==undefined)return _colColMap[key];
+  const aliases=ALIAS_MAP[key];
+  if(!aliases){_colColMap[key]=undefined;return undefined}
+  for(const a of aliases){
+    if(parsedData.colMap[a]!==undefined){_colColMap[key]=parsedData.colMap[a];return _colColMap[key]}
+  }
+  _colColMap[key]=undefined;return undefined;
+}
+
+function colData(key){
+  const idx=colIdx(key);
+  if(idx===undefined)return null;
+  return parsedData.rows.map(r=>{const v=Number(r[idx]);return isNaN(v)?null:v});
+}
+
+function safeNum(v){const n=Number(v);return isNaN(n)?null:n}
+
+// ██████  EXCEL PARSING  ██████
+function parseExcel(buffer){
+  const wb=XLSX.read(buffer,{type:'array'});
+  const mainSheet=wb.SheetNames.find(s=>s!=='Remarks')||wb.SheetNames[0];
+  const ws=wb.Sheets[mainSheet];
+  const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+  let headerRow=-1,catRow=-1;
+  for(let i=0;i<Math.min(raw.length,30);i++){
+    const r=raw[i];if(!r||!r.length)continue;
+    if(String(r[0]).trim().toLowerCase()==='obs'){headerRow=i;if(i>0)catRow=i-1;break}
+  }
+  if(headerRow===-1)throw new Error('未找到 LI-6800 数据头行（缺少 obs 列），请确认文件格式');
+
+  const unitRow=headerRow+1;
+  const hasUnits=raw[unitRow]&&String(raw[unitRow][0]).trim().toLowerCase()==='s';
+  const dataStart=hasUnits?unitRow+1:headerRow+1;
+
+  const headers=raw[headerRow].map(normalizeStr);
+  const units=hasUnits?raw[unitRow]:[];
+  const cats=catRow>=0?raw[catRow]:[];
+  const colMap={};
+  headers.forEach((h,i)=>{if(h)colMap[h]=i});
+
+  const rows=[];
+  for(let i=dataStart;i<raw.length;i++){
+    const r=raw[i];if(!r||r.length===0)continue;
+    const obs=safeNum(r[0]);if(obs===null||obs<1)continue;
+    rows.push(r);
+  }
+
+  let remarks={};
+  if(wb.SheetNames.includes('Remarks')){
+    const remRaw=XLSX.utils.sheet_to_json(wb.Sheets['Remarks'],{header:1,defval:''});
+    remRaw.forEach(r=>{if(r[0]&&String(r[0]).trim())remarks[String(r[0]).replace(/:$/,'').trim()]=String(r[1]||'').trim()});
+  }
+
+  const elapsedIdx=colMap['elapsed']!==undefined?colMap['elapsed']:colMap['time'];
+
+  return {raw,headers,units,cats,colMap,rows,remarks,elapsedIdx,dataStart,headerRow,unitRow,mainSheet};
+}
+
+// ██████  FILE HANDLING  ██████
+function processFile(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const r=parseExcel(new Uint8Array(e.target.result));
+      parsedData=r;
+      _colColMap={};
+      document.getElementById('emptyState').style.display='none';
+      document.getElementById('mainContent').style.display='block';
+      document.getElementById('resetBtn').style.display='';
+      document.getElementById('fileName').textContent=file.name;
+      updateInfoBar();
+      switchTab('overview');
+      renderAllCharts();
+    }catch(err){
+      alert('解析失败: '+err.message+'\n请确认这是 LI-6800 导出的 Excel 文件');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function handleFile(input){const file=input.files[0];if(file)processFile(file)}
+
+function resetAll(){
+  parsedData=null;_colColMap={};allCharts.forEach(c=>c.dispose());allCharts=[];renderedTabs={};
+  document.getElementById('emptyState').style.display='';
+  document.getElementById('mainContent').style.display='none';
+  document.getElementById('resetBtn').style.display='none';
+  document.getElementById('fileName').textContent='';
+  document.getElementById('infoBar').innerHTML='';
+  document.getElementById('rawTable').innerHTML='';
+}
+
+// ██████  INFO BAR  ██████
+function updateInfoBar(){
+  const bar=document.getElementById('infoBar');
+  if(!parsedData)return;
+  const r=parsedData.remarks;
+  const pills=[];
+  if(r['Console s/n'])pills.push({t:'主机',v:r['Console s/n']});
+  if(r['Console ver'])pills.push({t:'版本',v:r['Console ver']});
+  if(r['Chamber type'])pills.push({t:'叶室',v:r['Chamber type']});
+  if(r['Head s/n'])pills.push({t:'分析器',v:r['Head s/n']});
+  if(r['Factory cal date'])pills.push({t:'校准日期',v:r['Factory cal date']});
+  const firstDate=parsedData.rows[0]?parsedData.rows[0][3]:'';
+  if(firstDate)pills.push({t:'测量日期',v:String(firstDate).substring(0,8)});
+  const firstTime=parsedData.rows[0]?parsedData.rows[0][4]:'';
+  const lastTime=parsedData.rows[parsedData.rows.length-1]?parsedData.rows[parsedData.rows.length-1][4]:'';
+  if(firstTime&&lastTime)pills.push({t:'时段',v:firstTime+' ~ '+lastTime});
+
+  // Check if empty chamber
+  const aIdx=colIdx('A');
+  let hasPhoto=aIdx!==undefined&&parsedData.rows.some(rr=>{const v=safeNum(rr[aIdx]);return v!==null&&Math.abs(v)>0.01});
+  if(!hasPhoto)pills.push({t:'⚠ 空叶室测量',v:'光合速率为0',cls:'warn'});
+
+  pills.push({t:'数据点',v:parsedData.rows.length});
+  bar.innerHTML=pills.map(p=>'<span class="info-pill'+(p.cls?' '+p.cls:'')+'">'+p.t+': <b>'+p.v+'</b></span>').join('');
+}
+
+// ██████  CHART HELPER  ██████
+function makeChart(domId,seriesArr,opts){
+  opts=opts||{};
+  const dom=document.getElementById(domId);
+  if(!dom||!seriesArr||seriesArr.length===0)return null;
+  const chart=echarts.init(dom,'dark');
+  const xData=parsedData.rows.map(r=>safeNum(r[parsedData.elapsedIdx]));
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'#1e2d3d',borderColor:'#3d5a80',textStyle:{color:'#d0dbe8',fontSize:11}},
+    legend:{top:0,textStyle:{color:'#8ba5c0',fontSize:10},data:seriesArr.map(s=>s.name)},
+    grid:{left:55,right:22,top:28,bottom:opts.dataZoom===false?26:44},
+    xAxis:{type:'category',data:xData,axisLine:{lineStyle:{color:'#234060'}},axisLabel:{color:'#8ba5c0',fontSize:9,formatter:fmtTime,interval:'auto'},...(opts.xAxis||{})},
+    yAxis:{type:'value',name:opts.yName||'',nameTextStyle:{color:'#587694',fontSize:9},axisLabel:{color:'#8ba5c0',fontSize:9,interval:'auto'},splitLine:{lineStyle:{color:'#152238'}},...(opts.yAxis||{})},
+    dataZoom:opts.dataZoom!==false?[{type:'inside',start:0,end:100},{type:'slider',start:0,end:100,bottom:2,height:16,borderColor:'#2d4a6a',backgroundColor:'#132030',fillerColor:'#1a3a5a',textStyle:{color:'#8ba5c0',fontSize:9}}]:[],
+    series:seriesArr.map((s,i)=>({name:s.name,type:'line',data:s.data,smooth:true,symbol:'none',lineStyle:{width:s.width||1.5},connectNulls:true,...(s.extra||{})})),
+    color:opts.colors||COLORS
+  });
+  allCharts.push(chart);
+  return chart;
+}
+
+// ██████  RENDER ALL CHARTS  ██████
+function renderAllCharts(){
+  allCharts.forEach(c=>c.dispose());allCharts=[];
+  renderedTabs={};
+  renderOverview();renderedTabs.overview=true;
+}
+
+// ---- OVERVIEW ----
+function renderOverview(){
+  const c1=[];
+  if(colIdx('CO2_s')!==undefined)c1.push({name:'CO₂_s (样品)',data:colData('CO2_s'),width:2});
+  if(colIdx('CO2_r')!==undefined)c1.push({name:'CO₂_r (参比)',data:colData('CO2_r')});
+  const dc=colData('ΔCO2');if(dc)c1.push({name:'ΔCO₂ ×10',data:dc.map(v=>v!=null?v*10:null)});
+  if(c1.length)makeChart('chart-co2',c1,{yName:'μmol/mol'});
+
+  const c2=[];
+  if(colIdx('H2O_s')!==undefined)c2.push({name:'H₂O_s (样品)',data:colData('H2O_s')});
+  if(colIdx('H2O_r')!==undefined)c2.push({name:'H₂O_r (参比)',data:colData('H2O_r')});
+  const dh=colData('ΔH2O');if(dh)c2.push({name:'ΔH₂O ×100',data:dh.map(v=>v!=null?v*100:null)});
+  if(c2.length)makeChart('chart-h2o',c2,{yName:'mmol/mol'});
+
+  const c3=[];
+  if(colIdx('Tleaf')!==undefined)c3.push({name:'Tleaf (叶温)',data:colData('Tleaf'),width:2});
+  if(colIdx('Tair')!==undefined)c3.push({name:'Tair (空气温度)',data:colData('Tair')});
+  if(c3.length)makeChart('chart-temp',c3,{yName:'°C'});
+
+  const c4=[];
+  const fl=colData('Flow');if(fl)c4.push({name:'Flow (μmol/s)',data:fl});
+  const dp=colData('ΔPcham');if(dp)c4.push({name:'ΔPcham ×100',data:dp.map(v=>v!=null?v*100:null)});
+  const fan=colData('Fan_speed');if(fan)c4.push({name:'Fan/1000 rpm',data:fan.map(v=>v!=null?v/1000:null)});
+  if(c4.length)makeChart('chart-flow',c4,{yName:'Flow / ΔP×100 / Fan÷1000'});
+
+  const c5=[];
+  const a=colData('A');if(a)c5.push({name:'A (光合速率) μmol·m⁻²·s⁻¹',data:a,width:2});
+  const e=colData('E');if(e)c5.push({name:'E (蒸腾速率) mmol·m⁻²·s⁻¹',data:e});
+  if(c5.length)makeChart('chart-gas',c5,{yName:'μmol·m⁻²·s⁻¹ / mmol·m⁻²·s⁻¹'});
+
+  const c6=[];
+  const q=colData('Q');if(q)c6.push({name:'Q (光强) μmol·m⁻²·s⁻¹',data:q,width:2});
+  const qin=colData('Qin');if(qin)c6.push({name:'Qin (入射PAR)',data:qin});
+  const qabs=colData('Qabs');if(qabs)c6.push({name:'Qabs (吸收PAR)',data:qabs});
+  const qamb=colData('Qamb_in');if(qamb)c6.push({name:'Qamb_in',data:qamb});
+  if(c6.length)makeChart('chart-flr-overview',c6,{yName:'μmol·m⁻²·s⁻¹'});
+}
+
+// ---- GAS EXCHANGE ----
+function renderGas(){
+  const c1=[],c2=[],c3=[],c4=[],c5=[],c6=[];
+  if(colIdx('CO2_s')!==undefined)c1.push({name:'CO₂_s (样品)',data:colData('CO2_s'),width:2});
+  if(colIdx('CO2_r')!==undefined)c1.push({name:'CO₂_r (参比)',data:colData('CO2_r')});
+  const dc=colData('ΔCO2');if(dc)c1.push({name:'ΔCO₂ ×10',data:dc.map(v=>v!=null?v*10:null)});
+
+  if(colIdx('H2O_s')!==undefined)c2.push({name:'H₂O_s (样品)',data:colData('H2O_s')});
+  if(colIdx('H2O_r')!==undefined)c2.push({name:'H₂O_r (参比)',data:colData('H2O_r')});
+  const dh=colData('ΔH2O');if(dh)c2.push({name:'ΔH₂O ×100',data:dh.map(v=>v!=null?v*100:null)});
+
+  const a=colData('A');if(a)c3.push({name:'A (光合速率) μmol·m⁻²·s⁻¹',data:a,width:2});
+  const e=colData('E');if(e)c3.push({name:'E (蒸腾速率) mmol·m⁻²·s⁻¹',data:e});
+  const q=colData('Q');if(q)c3.push({name:'Q/500 (PAR÷500)',data:q.map(v=>v!=null?Number((v/500).toFixed(3)):null)});
+  const gs=colData('gsw');if(gs)c3.push({name:'gsw ×10 (气孔导度)',data:gs.map(v=>v!=null?v*10:null)});
+
+  const ci=colData('Ci');if(ci)c4.push({name:'Ci (胞间CO₂)',data:ci});
+  const gsw2=colData('gsw');if(gsw2)c4.push({name:'gsw (气孔导度)',data:gsw2});
+  const vpd=colData('VPDleaf');if(vpd)c4.push({name:'VPDleaf (kPa)',data:vpd});
+
+  const rabs=colData('Rabs');if(rabs)c5.push({name:'Rabs (吸收辐射) W·m⁻²',data:rabs});
+  const lat=colData('LatHFlux');if(lat)c5.push({name:'LatHFlux (潜热)',data:lat});
+  const sen=colData('SenHFlux');if(sen)c5.push({name:'SenHFlux (显热)',data:sen});
+  const nett=colData('NetTherm');if(nett)c5.push({name:'NetTherm (净热)',data:nett});
+
+  // A vs Q dual-Y chart
+  if(a&&q){
+    const aPoints=a.map((v,i)=>[q[i],v]);
+    const domAq=document.getElementById('chart-gas-aq');
+    if(domAq){
+      const chartAq=echarts.init(domAq,'dark');
+      chartAq.setOption({
+        backgroundColor:'transparent',
+        tooltip:{trigger:'item',backgroundColor:'#1e2d3d',borderColor:'#3d5a80',textStyle:{color:'#d0dbe8',fontSize:11},formatter:p=>'Q: '+Number(p.value[0]).toFixed(1)+'<br/>A: '+Number(p.value[1]).toFixed(3)},
+        grid:{left:60,right:20,top:10,bottom:28},
+        xAxis:{type:'value',name:'Q (μmol·m⁻²·s⁻¹)',nameTextStyle:{color:'#587694',fontSize:10},axisLabel:{color:'#8ba5c0',fontSize:10},splitLine:{lineStyle:{color:'#152238'}}},
+        yAxis:{type:'value',name:'A (μmol·m⁻²·s⁻¹)',nameTextStyle:{color:'#587694',fontSize:10},axisLabel:{color:'#8ba5c0',fontSize:10},splitLine:{lineStyle:{color:'#152238'}}},
+        series:[{type:'scatter',data:aPoints.filter(p=>p[0]!=null&&p[1]!=null),symbolSize:4,itemStyle:{color:'#00d2ff'},name:'A vs Q'}]
+      });
+      allCharts.push(chartAq);
+    }
+  }
+
+  if(c1.length)makeChart('chart-gas-co2',c1,{yName:'μmol/mol'});
+  if(c2.length)makeChart('chart-gas-h2o',c2,{yName:'mmol/mol'});
+  if(c3.length)makeChart('chart-gas-ae',c3,{yName:'A / E / Q÷500 / gsw×10'});
+  if(c4.length)makeChart('chart-gas-ci',c4,{yName:'Ci / gsw / VPD'});
+  if(c5.length)makeChart('chart-gas-energy',c5,{yName:'W·m⁻²'});
+}
+
+// ---- ENVIRONMENT ----
+function renderEnv(){
+  const c1=[];if(colIdx('Tleaf')!==undefined)c1.push({name:'Tleaf',data:colData('Tleaf'),width:2});
+  if(colIdx('Tair')!==undefined)c1.push({name:'Tair',data:colData('Tair')});
+  const tl2=colData('Tleaf2');if(tl2)c1.push({name:'Tleaf2',data:tl2});
+
+  const c2=[];const rh=colData('RHcham');if(rh)c2.push({name:'RHcham (%)',data:rh});
+  const vpd=colData('VPDleaf');if(vpd)c2.push({name:'VPDleaf (kPa)',data:vpd});
+
+  const c3=[];const fl=colData('Flow');if(fl)c3.push({name:'Flow (μmol/s)',data:fl});
+  const pa=colData('Pa');if(pa)c3.push({name:'Pa÷10 (kPa÷10)',data:pa.map(v=>v!=null?v/10:null)});
+  const dp=colData('ΔPcham');if(dp)c3.push({name:'ΔPcham ×100',data:dp.map(v=>v!=null?v*100:null)});
+  const fan=colData('Fan_speed');if(fan)c3.push({name:'Fan/1000 rpm',data:fan.map(v=>v!=null?v/1000:null)});
+
+  const c4=[];const ct=colData('Console_T');if(ct)c4.push({name:'Console_T (°C)',data:ct});
+  const crh=colData('Console_RH');if(crh)c4.push({name:'Console_RH (%)',data:crh});
+  const ch=colData('Console_H2O');if(ch)c4.push({name:'Console_H2O (mmol/mol)',data:ch});
+
+  if(c1.length)makeChart('chart-env-temp',c1,{yName:'°C'});
+  if(c2.length)makeChart('chart-env-rh',c2,{yName:'% / kPa'});
+  if(c3.length)makeChart('chart-env-flow',c3,{yName:'见图例'});
+  if(c4.length)makeChart('chart-env-console',c4,{yName:'°C / % / mmol/mol'});
+}
+
+// ---- FLUORESCENCE ----
+function renderFlr(){
+  const c1=[];const q=colData('Q');if(q)c1.push({name:'Q (μmol·m⁻²·s⁻¹)',data:q,width:2});
+  const fr=colData('f_red');if(fr)c1.push({name:'f_red',data:fr});
+  const fb=colData('f_blue');if(fb)c1.push({name:'f_blue',data:fb});
+  const ff=colData('f_farred');if(ff)c1.push({name:'f_farred',data:ff});
+
+  const c2=[];const Fv=colData('F');if(Fv)c2.push({name:'F',data:Fv});
+  const Fdc=colData('F_dc');if(Fdc)c2.push({name:'F_dc /100',data:Fdc.map(v=>v!=null?v/100:null)});
+
+  const c3=[];['Tled','TDigital','TPreamp','TDrive','TPwrSpy'].forEach(k=>{const d=colData(k);if(d)c3.push({name:k,data:d})});
+
+  if(c1.length)makeChart('chart-flr-q',c1,{yName:'Q / 比例'});
+  if(c2.length)makeChart('chart-flr-f',c2,{yName:'F'});
+  if(c3.length)makeChart('chart-flr-temp',c3,{yName:'°C'});
+}
+
+// ---- LIGHT RESPONSE (PAR + Photosynthesis) ----
+function renderLight(){
+  const c1=[];
+  const q=colData('Q');if(q)c1.push({name:'Q (荧光光量子通量)',data:q,width:2});
+  const qin=colData('Qin');if(qin)c1.push({name:'Qin (入射PAR)',data:qin});
+  const qabs=colData('Qabs');if(qabs)c1.push({name:'Qabs (吸收PAR)',data:qabs});
+  const qi=colData('Qamb_in');if(qi)c1.push({name:'Qamb_in (环境光强)',data:qi});
+  const qo=colData('Qamb_out');if(qo)c1.push({name:'Qamb_out',data:qo});
+  if(c1.length)makeChart('chart-light-par',c1,{yName:'μmol·m⁻²·s⁻¹'});
+
+  // A-Q curve: use X=Q as scatter
+  const a=colData('A');
+  const qData=colData('Q');
+  if(a&&qData){
+    const aqPoints=a.map((v,i)=>[qData[i],v]).filter(p=>p[0]!=null&&p[1]!=null);
+    const dom=document.getElementById('chart-light-aq');
+    if(dom&&aqPoints.length>0){
+      const chart=echarts.init(dom,'dark');
+      chart.setOption({
+        backgroundColor:'transparent',
+        tooltip:{trigger:'item',backgroundColor:'#1e2d3d',borderColor:'#3d5a80',textStyle:{color:'#d0dbe8',fontSize:11},formatter:p=>'Q: '+Number(p.value[0]).toFixed(1)+'<br/>A: '+Number(p.value[1]).toFixed(3)},
+        grid:{left:60,right:20,top:10,bottom:28},
+        xAxis:{type:'value',name:'Q (μmol·m⁻²·s⁻¹)',nameTextStyle:{color:'#587694',fontSize:10},axisLabel:{color:'#8ba5c0',fontSize:10},splitLine:{lineStyle:{color:'#152238'}}},
+        yAxis:{type:'value',name:'A (μmol·m⁻²·s⁻¹)',nameTextStyle:{color:'#587694',fontSize:10},axisLabel:{color:'#8ba5c0',fontSize:10},splitLine:{lineStyle:{color:'#152238'}}},
+        series:[{type:'scatter',data:aqPoints,symbolSize:4,itemStyle:{color:'#00d2ff'}}]
+      });
+      allCharts.push(chart);
+    }
+  }
+
+  const c3=[];
+  const qr=colData('Q_red');if(qr)c3.push({name:'Q_red (红光)',data:qr});
+  const qb=colData('Q_blue');if(qb)c3.push({name:'Q_blue (蓝光)',data:qb});
+  const qf=colData('Q_farred');if(qf)c3.push({name:'Q_farred (远红光)',data:qf});
+  const fr=colData('f_red');if(fr)c3.push({name:'f_red (红光比例)',data:fr});
+  const fb=colData('f_blue');if(fb)c3.push({name:'f_blue (蓝光比例)',data:fb});
+  const ff=colData('f_farred');if(ff)c3.push({name:'f_farred (远红光比例)',data:ff});
+  if(c3.length)makeChart('chart-light-spec',c3,{yName:'μmol·m⁻²·s⁻¹ / 比例'});
+
+  const c4=[];
+  if(a)c4.push({name:'A (光合速率) μmol·m⁻²·s⁻¹',data:a,width:2});
+  const gs=colData('gsw');if(gs)c4.push({name:'gsw (气孔导度) mol·m⁻²·s⁻¹',data:gs});
+  const ci=colData('Ci');if(ci)c4.push({name:'Ci (胞间CO₂) μmol/mol',data:ci});
+  if(c4.length)makeChart('chart-light-ags',c4,{yName:'A / gsw / Ci'});
+}
+
+// ---- STABILITY ----
+function renderStab(){
+  const c1=[];['ΔCO2:MN','ΔCO2:SLP','ΔCO2:SD'].forEach(k=>{const d=colData(k);if(d)c1.push({name:k,data:d})});
+  const c2=[];const hm=colData('ΔH2O:MN');if(hm)c2.push({name:'ΔH₂O:MN',data:hm});
+  const hs=colData('ΔH2O:SLP');if(hs)c2.push({name:'ΔH₂O:SLP ×10',data:hs.map(v=>v!=null?v*10:null)});
+  const hsd=colData('ΔH2O:SD');if(hsd)c2.push({name:'ΔH₂O:SD',data:hsd});
+
+  if(c1.length)makeChart('chart-stab-co2',c1,{yName:'μmol/mol'});
+  if(c2.length)makeChart('chart-stab-h2o',c2,{yName:'mmol/mol'});
+}
+
+function renderDiag(){
+  const c1=[];['Tled','TDigital','TPreamp','TDrive','TPwrSpy'].forEach(k=>{const d=colData(k);if(d)c1.push({name:k,data:d})});
+
+  const c2=[];['MatchCO2','MatchH2O','MatchValveR','MatchValveS'].forEach(k=>{const d=colData(k);if(d)c2.push({name:k,data:d})});
+
+  const c3=[];['Pump','Fan_%','Flow_%','CO2_%'].forEach(k=>{const d=colData(k);if(d)c3.push({name:k,data:d})});
+
+  const c4=[];['Ts','Tr','Txchg','Tirga','Tchopper'].forEach(k=>{const d=colData(k);if(d)c4.push({name:k,data:d})});
+
+  const c5=[];['abs_c_a','abs_c_b','abs_h_a','abs_h_b'].forEach(k=>{const d=colData(k);if(d)c5.push({name:k,data:d})});
+
+  const c6=[];['Flow_s_v','Flow_r_v'].forEach(k=>{const d=colData(k);if(d)c6.push({name:k,data:d})});
+
+  if(c1.length)makeChart('chart-diag-led',c1,{yName:'°C'});
+  if(c2.length)makeChart('chart-diag-match',c2,{yName:'μmol/mol'});
+  if(c3.length)makeChart('chart-diag-pump',c3,{yName:'%'});
+  if(c4.length)makeChart('chart-diag-irga',c4,{yName:'°C'});
+  if(c5.length)makeChart('chart-diag-abs',c5,{yName:''});
+  if(c6.length)makeChart('chart-diag-flowv',c6,{yName:'V'});
+}
+
+function renderRawTable(){
+  if(!parsedData)return;
+  const pageSize=parseInt(document.getElementById('rawPageSize').value)||100;
+  const search=document.getElementById('rawSearch').value.trim().toLowerCase();
+
+  let showCols=[];
+  if(search){
+    parsedData.headers.forEach((h,i)=>{if(h&&h.toLowerCase().includes(search))showCols.push(i)});
+    if(showCols.length===0)showCols=parsedData.headers.map((_,i)=>i).filter(i=>parsedData.headers[i]);
+  }else{
+    showCols=parsedData.headers.map((_,i)=>i).filter(i=>parsedData.headers[i]);
+  }
+
+  const displayRows=pageSize>0?parsedData.rows.slice(0,pageSize):parsedData.rows;
+  document.getElementById('rawRowCount').textContent=parsedData.rows.length;
+  document.getElementById('rawColCount').textContent=showCols.length;
+
+  let h='<table><thead><tr><th>#</th>';
+  showCols.forEach(i=>{
+    const hn=String(parsedData.headers[i]||'');
+    const un=parsedData.units[i]?String(parsedData.units[i]).substring(0,14):'';
+    h+='<th title="'+un+'">'+hn+'</th>';
+  });
+  h+='</tr></thead><tbody>';
+  displayRows.forEach((r,ri)=>{
+    h+='<tr><td class="col-number">'+(ri+1)+'</td>';
+    showCols.forEach(i=>{
+      const v=r[i];let d='';
+      if(v!==null&&v!==undefined&&v!==''){
+        if(typeof v==='number')d=Math.abs(v)<100?Number(v.toFixed(4)):Number(v.toFixed(2));
+        else d=String(v).substring(0,18);
+      }
+      h+='<td>'+d+'</td>';
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  if(pageSize>0&&parsedData.rows.length>pageSize)h+='<div style="padding:6px 12px;color:#587694;font-size:11px">显示前 '+pageSize+' 行，共 '+parsedData.rows.length+' 行</div>';
+  document.getElementById('rawTable').innerHTML=h;
+}
+
+window.addEventListener('resize',()=>allCharts.forEach(c=>{try{c.resize()}catch(e){}}));
+
+// ██████  STATISTICS ENGINE  ██████
+function computeStats(arr){
+  if(!arr||arr.length===0)return null;
+  const valid=arr.filter(v=>v!=null&&!isNaN(v));
+  if(valid.length===0)return null;
+  const n=valid.length;
+  const sum=valid.reduce((a,b)=>a+b,0);
+  const mean=sum/n;
+  const sorted=[...valid].sort((a,b)=>a-b);
+  const min=sorted[0],max=sorted[n-1];
+  const q1=sorted[Math.floor(n*0.25)],q3=sorted[Math.floor(n*0.75)];
+  let variance=0;for(const v of valid)variance+=(v-mean)*(v-mean);
+  const sd=Math.sqrt(variance/n);
+  const cv=sd/Math.abs(mean);
+  return{n,total:arr.length,missing:arr.length-n,mean,median:sorted[Math.floor(n/2)],sd,cv,min,max,q1,q3};
+}
+
+const STAT_PARAMS=[
+  {k:'A',label:'A (光合速率)',unit:'μmol·m⁻²·s⁻¹'},
+  {k:'E',label:'E (蒸腾速率)',unit:'mmol·m⁻²·s⁻¹'},
+  {k:'gsw',label:'gsw (气孔导度)',unit:'mol·m⁻²·s⁻¹'},
+  {k:'Ci',label:'Ci (胞间CO₂)',unit:'μmol/mol'},
+  {k:'CO2_s',label:'CO₂_s (样品CO₂)',unit:'μmol/mol'},
+  {k:'CO2_r',label:'CO₂_r (参比CO₂)',unit:'μmol/mol'},
+  {k:'H2O_s',label:'H₂O_s (样品H₂O)',unit:'mmol/mol'},
+  {k:'H2O_r',label:'H₂O_r (参比H₂O)',unit:'mmol/mol'},
+  {k:'VPDleaf',label:'VPDleaf',unit:'kPa'},
+  {k:'Tleaf',label:'Tleaf (叶温)',unit:'°C'},
+  {k:'Tair',label:'Tair (气温)',unit:'°C'},
+  {k:'Q',label:'Q (光强PAR)',unit:'μmol·m⁻²·s⁻¹'},
+  {k:'RHcham',label:'RHcham (叶室湿度)',unit:'%'},
+  {k:'Flow',label:'Flow (流速)',unit:'μmol/s'},
+  {k:'F',label:'F (荧光信号)',unit:''},
+  {k:'F_dc',label:'F_dc (荧光DC)',unit:''},
+];
+
+const OUTLIER_RULES=[
+  {k:'A',label:'光合速率 |A|>20',test:v=>Math.abs(v)>20,severity:'高'},
+  {k:'A',label:'光合速率 |A|>40',test:v=>Math.abs(v)>40,severity:'严重'},
+  {k:'gsw',label:'气孔导度 gsw>2',test:v=>v>2,severity:'高'},
+  {k:'Ci',label:'胞间CO₂ Ci>2000',test:v=>v>2000,severity:'中'},
+  {k:'Ci',label:'胞间CO₂ Ci<0',test:v=>v<0,severity:'严重'},
+  {k:'VPDleaf',label:'VPDleaf>10',test:v=>v>10,severity:'中'},
+  {k:'VPDleaf',label:'VPDleaf<0',test:v=>v<0,severity:'严重'},
+  {k:'Q',label:'光强 Q>3000',test:v=>v>3000,severity:'中'},
+  {k:'E',label:'蒸腾 E>20',test:v=>v>20,severity:'中'},
+  {k:'CO2_s',label:'CO₂_s>1000',test:v=>v>1000,severity:'中'},
+  {k:'CO2_s',label:'CO₂_s<30',test:v=>v>0&&v<30,severity:'高'},
+];
+
+let _globalStats=null;
+let _globalOutliers=null;
+let _globalAQFit=null;
+
+function buildOutlierMap(){
+  const map={};
+  OUTLIER_RULES.forEach((rule,i)=>{
+    const d=colData(rule.k);if(!d)return;
+    d.forEach((v,j)=>{
+      if(v!=null&&rule.test(v)){
+        if(!map[j])map[j]={obs:parsedData.rows[j][0],row:j+1,flags:[]};
+        map[j].flags.push({rule:rule.label,value:Number(v.toFixed(4)),severity:rule.severity,key:rule.k});
+      }
+    });
+  });
+  return map;
+}
+
+function renderStats(){
+  const stats={};
+  STAT_PARAMS.forEach(p=>{const s=computeStats(colData(p.k));if(s)stats[p.k]=s});
+  _globalStats=stats;
+  _globalOutliers=buildOutlierMap();
+
+  // Statistics table
+  const thead='<tr><th>参数</th><th>单位</th><th>样本量</th><th>均值</th><th>中位数</th><th>标准差</th><th>CV%</th><th>最小值</th><th>Q1</th><th>Q3</th><th>最大值</th><th>缺失</th></tr>';
+  let tbody='';
+  STAT_PARAMS.forEach(p=>{
+    const s=stats[p.k];
+    if(!s)return;
+    tbody+='<tr><td class="param-name">'+p.label+'</td><td>'+p.unit+'</td>';
+    tbody+='<td>'+s.n+'</td>';
+    tbody+='<td>'+fmt4(s.mean)+'</td><td>'+fmt4(s.median)+'</td><td>'+fmt4(s.sd)+'</td>';
+    tbody+='<td>'+fmt4(s.mean!==0?s.cv*100:0)+'</td>';
+    tbody+='<td>'+fmt4(s.min)+'</td><td>'+fmt4(s.q1)+'</td><td>'+fmt4(s.q3)+'</td><td>'+fmt4(s.max)+'</td>';
+    tbody+='<td>'+(s.missing>0?'<span class="chart-outlier">'+s.missing+'</span>':0)+'</td></tr>';
+  });
+  document.getElementById('statsTable').innerHTML='<table class="stats-tbl"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
+
+  // A-Q Curve fitting
+  renderAQFit();
+
+  // Outlier report
+  const allFlags=Object.values(_globalOutliers);
+  const totalOutliers=allFlags.reduce((s,v)=>s+v.flags.length,0);
+  let ot='<table class="stats-tbl"><thead><tr><th>规则</th><th>检出数</th><th>严重级别</th></tr></thead><tbody>';
+  const ruleCounts={};
+  allFlags.forEach(v=>v.flags.forEach(f=>{const k=f.rule;ruleCounts[k]=(ruleCounts[k]||0)+1}));
+  OUTLIER_RULES.forEach(r=>{
+    const cnt=ruleCounts[r.rule]||0;
+    if(cnt>0)ot+='<tr><td class="param-name">'+r.rule+'</td><td class="'+(r.severity==='严重'?'outlier':'')+'">'+cnt+'</td><td>'+r.severity+'</td></tr>';
+  });
+  ot+='<tr style="font-weight:bold"><td>合计</td><td>'+totalOutliers+'</td><td>涉及'+Object.keys(_globalOutliers).length+'行</td></tr>';
+  ot+='</tbody></table>';
+  if(totalOutliers===0)ot='<div style="padding:16px;color:#2ed573;text-align:center">✅ 未检出异常值，数据质量良好</div>';
+  document.getElementById('outlierTable').innerHTML=ot;
+
+  // Outlier index
+  const entries=Object.entries(_globalOutliers).sort((a,b)=>a[0]-b[0]);
+  let oi='';
+  if(entries.length>0){
+    oi='<table class="stats-tbl"><thead><tr><th>数据行号</th><th>仪器观测号 (obs)</th><th>时间</th><th>异常项</th></tr></thead><tbody>';
+    entries.slice(0,200).forEach(([idx,info])=>{
+      const row=parsedData.rows[idx];
+      const time=row[4]||row[2]||'';
+      oi+='<tr><td>'+info.row+'</td><td>'+info.obs+'</td><td>'+time+'</td><td>'+info.flags.map(f=>'<span class="chart-outlier">'+f.rule+'='+f.value+'</span>').join(', ')+'</td></tr>';
+    });
+    oi+='</tbody></table>';
+    if(entries.length>200)oi+='<div style="padding:6px 12px;color:#587694">仅显示前200条，共'+entries.length+'行异常</div>';
+  }else{
+    oi='<div style="padding:16px;color:#2ed573;text-align:center">✅ 无异常值</div>';
+  }
+  document.getElementById('outlierIndex').innerHTML=oi;
+}
+
+function fmt4(v){if(v==null||isNaN(v))return'-';return Math.abs(v)<10?Number(v.toFixed(3)):Math.abs(v)<100?Number(v.toFixed(2)):Number(v.toFixed(1))}
+
+// ██████  A-Q CURVE FITTING (Rectangular Hyperbola)  ██████
+function renderAQFit(){
+  const a=colData('A');const q=colData('Q');
+  if(!a||!q){document.getElementById('aqFitResult').innerHTML='<span class="warn">缺少A或Q数据</span>';return}
+
+  const pts=a.map((v,i)=>[q[i],v]).filter(p=>p[0]!=null&&p[1]!=null);
+  if(pts.length<10){document.getElementById('aqFitResult').innerHTML='<span class="warn">数据点不足(需≥10)</span>';return}
+
+  const result=fitRectangularHyperbola(pts);
+  _globalAQFit=result;
+
+  const dom=document.getElementById('chart-aqfit');if(!dom)return;
+  const chart=echarts.init(dom,'dark');
+
+  const qLine=[],aLine=[];
+  const qMin=0,qMax=Math.max(...q.filter(v=>v!=null));
+  for(let qi=qMin;qi<=qMax;qi+=(qMax-qMin)/100){qLine.push(qi);aLine.push(modelRH(qi,result.alpha,result.Amax,result.Rd))}
+
+  const outlierMap=buildOutlierMap();
+  const normalPoints=[],outlierPoints=[];
+  pts.forEach((p,i)=>{
+    const idx=a.findIndex((v,j)=>v===p[1]&&q[j]===p[0]); // approximate
+    if(outlierMap[i])outlierPoints.push({value:p,obs:outlierMap[i].obs});
+    else normalPoints.push(p);
+  });
+
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'#1e2d3d',borderColor:'#3d5a80',textStyle:{color:'#d0dbe8',fontSize:11},formatter:p=>{
+      if(p.seriesName==='fit')return 'Q: '+Number(p.value[0]).toFixed(1)+'<br/>A(fit): '+Number(p.value[1]).toFixed(3);
+      return 'Q: '+Number(p.value[0]).toFixed(1)+'<br/>A: '+Number(p.value[1]).toFixed(3);
+    }},
+    legend:{top:0,textStyle:{color:'#8ba5c0',fontSize:10}},
+    grid:{left:55,right:22,top:28,bottom:26},
+    xAxis:{type:'value',name:'PAR (μmol·m⁻²·s⁻¹)',nameTextStyle:{color:'#587694',fontSize:9},axisLabel:{color:'#8ba5c0',fontSize:9},splitLine:{lineStyle:{color:'#152238'}}},
+    yAxis:{type:'value',name:'A (μmol·m⁻²·s⁻¹)',nameTextStyle:{color:'#587694',fontSize:9},axisLabel:{color:'#8ba5c0',fontSize:9},splitLine:{lineStyle:{color:'#152238'}}},
+    series:[
+      {name:'实测数据',type:'scatter',data:normalPoints,symbolSize:5,itemStyle:{color:'#00d2ff'}},
+      {name:'拟合曲线',type:'line',data:qLine.map((qi,i)=>[qi,aLine[i]]),smooth:true,symbol:'none',lineStyle:{color:'#feca57',width:2}},
+      {name:'异常值',type:'scatter',data:outlierPoints.map(p=>p.value),symbolSize:8,itemStyle:{color:'#ff6b6b',borderColor:'#ff6b6b',borderWidth:2},symbol:'diamond'}
+    ]
+  });
+  allCharts.push(chart);
+
+  let r='<div class="param"><b>模型:</b> A = (α·Q·Amax)/(α·Q+Amax) − Rd</div>';
+  if(result.converged){
+    r+='<div class="param"><b>α (表观量子效率):</b> <span class="val">'+Number(result.alpha.toFixed(5))+'</span> <span class="ci">mol CO₂·mol⁻¹ photons</span></div>';
+    r+='<div class="param"><b>Amax (最大光合速率):</b> <span class="val">'+Number(result.Amax.toFixed(3))+'</span> <span class="ci">μmol·m⁻²·s⁻¹</span></div>';
+    r+='<div class="param"><b>Rd (暗呼吸速率):</b> <span class="val">'+Number(result.Rd.toFixed(3))+'</span> <span class="ci">μmol·m⁻²·s⁻¹</span></div>';
+    r+='<div class="param"><b>R² (决定系数):</b> <span class="val">'+Number(result.r2.toFixed(4))+'</span></div>';
+    r+='<div class="param"><b>RMSE:</b> <span class="val">'+Number(result.rmse.toFixed(4))+'</span> <span class="ci">μmol·m⁻²·s⁻¹</span></div>';
+    r+='<div class="param"><b>光补偿点 (LCP):</b> <span class="val">'+Number((result.Rd*result.Amax/(result.alpha*(result.Amax-result.Rd))).toFixed(1))+'</span> <span class="ci">μmol·m⁻²·s⁻¹</span></div>';
+  }else{
+    r+='<span class="warn">⚠ 拟合未收敛。可能原因: 数据为恒定光强(非光响应曲线)或噪声过大。请使用多梯度光强的 A-Q 数据。</span><br>';
+    r+='<span class="ci">当前数据所有点的 Q 值取值数 = '+new Set(q.filter(v=>v!=null).map(v=>Math.round(v))).size+' 个</span>';
+  }
+  document.getElementById('aqFitResult').innerHTML=r;
+}
+
+function modelRH(Q,alpha,Amax,Rd){
+  if(Q<=0)return -Rd;
+  return (alpha*Q*Amax)/(alpha*Q+Amax)-Rd;
+}
+
+function fitRectangularHyperbola(pts){
+  let alpha=0.05,Amax=Math.max(...pts.map(p=>p[1]),1),Rd=1;
+  const lr=0.0001,iters=3000,n=pts.length;
+  let bestAlpha=alpha,bestAmax=Amax,bestRd=Rd,bestSSE=Infinity;
+
+  for(let iter=0;iter<iters;iter++){
+    let gradA=0,gradM=0,gradR=0,sse=0;
+    for(const [qi,ai] of pts){
+      const pred=modelRH(qi,alpha,Amax,Rd);
+      const err=pred-ai;sse+=err*err;
+      const denom=alpha*qi+Amax;if(denom===0)continue;
+      const dA=(Amax*Amax*qi)/(denom*denom);
+      const dM=(alpha*alpha*qi*qi)/(denom*denom);
+      gradA+=2*err*dA;gradM+=2*err*dM;gradR+=2*err*(-1);
+    }
+    alpha-=lr*gradA/n;Amax-=lr*gradM/n;Rd-=lr*gradR/n;
+    if(alpha<0.001)alpha=0.001;if(Amax<0)Amax=0;if(Rd<0)Rd=0;
+    if(sse<bestSSE){bestSSE=sse;bestAlpha=alpha;bestAmax=Amax;bestRd=Rd}
+  }
+
+  let ssTot=0;const meanY=pts.reduce((s,p)=>s+p[1],0)/n;
+  for(const[,ai]of pts){const d=ai-meanY;ssTot+=d*d}
+  const r2=1-bestSSE/ssTot;
+  const rmse=Math.sqrt(bestSSE/n);
+  return{alpha:bestAlpha,Amax:bestAmax,Rd:bestRd,r2,rmse,converged:r2>0&&rmse<100,n};
+}
+
+// ██████  CSV EXPORT  ██████
+function downloadCSV(filename,rows){
+  const csv=rows.map(r=>r.map(v=>{
+    if(v==null||v===undefined)return'';
+    const s=String(v);
+    return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s.replace(/"/g,'""')+'"':s;
+  }).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportStatsCSV(){
+  if(!_globalStats){alert('请先切换到"定量分析"标签页生成统计数据');return}
+  const rows=[['参数','单位','样本量','均值','中位数','标准差','CV%','最小值','Q1','Q3','最大值','缺失']];
+  STAT_PARAMS.forEach(p=>{
+    const s=_globalStats[p.k];if(!s)return;
+    rows.push([p.label,p.unit,s.n,fmt4(s.mean),fmt4(s.median),fmt4(s.sd),fmt4(s.mean!==0?s.cv*100:0),fmt4(s.min),fmt4(s.q1),fmt4(s.q3),fmt4(s.max),s.missing]);
+  });
+  if(_globalAQFit&&_globalAQFit.converged){
+    rows.push([],['光响应拟合参数'],['α (量子效率)',_globalAQFit.alpha],['Amax',_globalAQFit.Amax+' μmol·m⁻²·s⁻¹'],['Rd',_globalAQFit.Rd+' μmol·m⁻²·s⁻¹'],['R²',_globalAQFit.r2],['RMSE',_globalAQFit.rmse],['LCP光补偿点',(Math.round(_globalAQFit.Rd*_globalAQFit.Amax/(_globalAQFit.alpha*(_globalAQFit.Amax-_globalAQFit.Rd))*10)/10)+' μmol·m⁻²·s⁻¹']);
+  }
+  const ts=new Date().toISOString().slice(0,10);
+  downloadCSV('LI6800_statistics_'+ts+'.csv',rows);
+}
+
+function exportChartDataCSV(){
+  if(!parsedData){alert('请先加载数据');return}
+  const keys=STAT_PARAMS.map(p=>p.k).filter(k=>colIdx(k)!==undefined);
+  const rows=[['obs','elapsed','hhmmss',...keys]];
+  parsedData.rows.forEach((r,i)=>{
+    const row=[r[0],r[parsedData.elapsedIdx],r[4]||''];
+    keys.forEach(k=>{const idx=colIdx(k);const v=safeNum(idx!==undefined?r[idx]:null);row.push(v!=null?fmt4(v):'')});
+    rows.push(row);
+  });
+  const ts=new Date().toISOString().slice(0,10);
+  downloadCSV('LI6800_chart_data_'+ts+'.csv',rows);
+}
+
+function exportOutliersCSV(){
+  if(!_globalOutliers||Object.keys(_globalOutliers).length===0){alert('未检出异常值');return}
+  const rows=[['数据行号','仪器观测号obs','时间','参数','检出值','严重级别','触发规则']];
+  Object.entries(_globalOutliers).forEach(([idx,info])=>{
+    const row=parsedData.rows[idx];
+    const time=row[4]||row[2]||'';
+    info.flags.forEach(f=>rows.push([info.row,info.obs,time,f.key,f.value,f.severity,f.rule]));
+  });
+  const ts=new Date().toISOString().slice(0,10);
+  downloadCSV('LI6800_outliers_'+ts+'.csv',rows);
+}
+</script>
+</body>
+</html>
