@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mindustry — 塔防与工厂自动化的完美融合</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#F4A950',
+                        'brand-dark': '#D4893A',
+                        'brand-light': '#F7C478',
+                        rust: '#C84C32',
+                        steel: '#7B8B9A',
+                        dark: '#1A1D23',
+                        'dark-card': '#242833',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #1A1D23;
+            color: #E5E7EB;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                radial-gradient(circle, rgba(244,169,80,0.06) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(244,169,80,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 60%, rgba(200,76,50,0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 90%, rgba(244,169,80,0.03) 0%, transparent 50%);
+            animation: bg-shift 12s ease-in-out infinite alternate;
+        }
+        @keyframes bg-shift {
+            0% {
+                background:
+                    radial-gradient(ellipse at 20% 20%, rgba(244,169,80,0.04) 0%, transparent 50%),
+                    radial-gradient(ellipse at 80% 60%, rgba(200,76,50,0.03) 0%, transparent 50%),
+                    radial-gradient(ellipse at 50% 90%, rgba(244,169,80,0.03) 0%, transparent 50%);
+            }
+            50% {
+                background:
+                    radial-gradient(ellipse at 50% 30%, rgba(244,169,80,0.05) 0%, transparent 55%),
+                    radial-gradient(ellipse at 30% 70%, rgba(200,76,50,0.04) 0%, transparent 55%),
+                    radial-gradient(ellipse at 70% 85%, rgba(244,169,80,0.04) 0%, transparent 55%);
+            }
+            100% {
+                background:
+                    radial-gradient(ellipse at 80% 15%, rgba(244,169,80,0.04) 0%, transparent 50%),
+                    radial-gradient(ellipse at 20% 65%, rgba(200,76,50,0.03) 0%, transparent 50%),
+                    radial-gradient(ellipse at 60% 80%, rgba(244,169,80,0.03) 0%, transparent 50%);
+            }
+        }
+        .nav-scrolled { box-shadow: 0 2px 24px rgba(0,0,0,0.6); }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #F4A950;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after,
+        .nav-link.active::after { width: 100%; }
+        .card-hover {
+            transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 40px rgba(244,169,80,0.12);
+            border-color: rgba(244,169,80,0.3);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(244,169,80,0.15); }
+            50% { box-shadow: 0 0 40px rgba(244,169,80,0.3); }
+        }
+        .pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
+
+        .hero-bg {
+            background:
+                radial-gradient(ellipse at 30% 20%, rgba(244,169,80,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 60%, rgba(200,76,50,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 80%, rgba(244,169,80,0.04) 0%, transparent 50%);
+        }
+
+        .mobile-menu { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+        .mobile-menu.open { max-height: 320px; }
+        .pixel-art { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+        .screenshot-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+        .screenshot-wrapper:hover {
+            transform: scale(1.03);
+            box-shadow: 0 12px 48px rgba(244,169,80,0.2);
+        }
+        .screenshot-wrapper img {
+            transition: transform 0.5s ease;
+        }
+        .screenshot-wrapper:hover img {
+            transform: scale(1.05);
+        }
+        .screenshot-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(26,29,35,0.85) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.35s ease;
+            display: flex;
+            align-items: flex-end;
+            padding: 1.25rem;
+        }
+        .screenshot-wrapper:hover .screenshot-overlay {
+            opacity: 1;
+        }
+        .screenshot-overlay span {
+            color: #F4A950;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transform: translateY(8px);
+            transition: transform 0.35s ease;
+        }
+        .screenshot-wrapper:hover .screenshot-overlay span {
+            transform: translateY(0);
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        .section-alt + .section-normal,
+        .section-normal + .section-alt {
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .timeline-line {
+            display: none;
+        }
+        @media (min-width: 768px) {
+            .timeline-line {
+                display: block;
+                position: absolute;
+                left: 1.35rem;
+                top: 2.5rem;
+                bottom: 2.5rem;
+                width: 1px;
+                background: linear-gradient(to bottom, rgba(244,169,80,0.3), rgba(244,169,80,0.05), rgba(244,169,80,0.3));
+            }
+        }
+
+        .stat-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(244,169,80,0.1);
+            border-color: rgba(244,169,80,0.25);
+        }
+
+        .feature-icon {
+            transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+        .card-hover:hover .feature-icon {
+            transform: scale(1.1);
+            background-color: rgba(244,169,80,0.18);
+        }
+
+        .turret-icon {
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+        .card-hover:hover .turret-icon {
+            transform: scale(1.12);
+            box-shadow: 0 0 24px rgba(244,169,80,0.2);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <canvas id="bg-canvas" class="fixed inset-0 pointer-events-none" style="z-index:0;"></canvas>
+
+    <!-- ==================== 导航栏 ==================== -->
+    <header id="navbar" class="fixed top-0 left-0 right-0 z-50 bg-dark/90 backdrop-blur-lg border-b border-white/5 transition-shadow duration-300">
+        <nav class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="#home" class="flex items-center">
+                <img src="images/logo.png" alt="Mindustry" class="h-6 md:h-8 w-auto pixel-art">
+            </a>
+            <ul class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
+                <li><a href="#home" class="nav-link active text-brand">概览</a></li>
+                <li><a href="#about" class="nav-link hover:text-brand transition-colors">关于</a></li>
+                <li><a href="#features" class="nav-link hover:text-brand transition-colors">特色</a></li>
+                <li><a href="#gameplay" class="nav-link hover:text-brand transition-colors">玩法</a></li>
+                <li><a href="#screenshots" class="nav-link hover:text-brand transition-colors">截图</a></li>
+                <li><a href="#links" class="nav-link hover:text-brand transition-colors">资源</a></li>
+            </ul>
+            <button id="menu-toggle" class="md:hidden text-gray-400 hover:text-brand transition-colors focus:outline-none" aria-label="菜单">
+                <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+        </nav>
+        <div id="mobile-menu" class="mobile-menu md:hidden bg-dark/95 backdrop-blur-lg border-t border-white/5">
+            <ul class="flex flex-col px-6 py-4 gap-3 text-sm font-medium text-gray-400">
+                <li><a href="#home" class="block py-2 hover:text-brand transition-colors mobile-link">概览</a></li>
+                <li><a href="#about" class="block py-2 hover:text-brand transition-colors mobile-link">关于</a></li>
+                <li><a href="#features" class="block py-2 hover:text-brand transition-colors mobile-link">特色</a></li>
+                <li><a href="#gameplay" class="block py-2 hover:text-brand transition-colors mobile-link">玩法</a></li>
+                <li><a href="#screenshots" class="block py-2 hover:text-brand transition-colors mobile-link">截图</a></li>
+                <li><a href="#links" class="block py-2 hover:text-brand transition-colors mobile-link">资源</a></li>
+            </ul>
+        </div>
+    </header>
+
+    <!-- ==================== 英雄区 ==================== -->
+    <section id="home" class="section-normal relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 hero-bg"></div>
+        <div class="relative z-10 text-center px-6 max-w-3xl mx-auto pt-16">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand/30 bg-brand/5 text-brand text-xs font-semibold tracking-wider uppercase mb-8">
+                开源沙盒塔防游戏
+            </div>
+            <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold text-white mb-6 tracking-tight leading-none">
+                Mind<span class="text-brand">ustry</span>
+            </h1>
+            <p class="text-gray-400 text-lg md:text-xl mb-4 leading-relaxed max-w-xl mx-auto">
+                塔防策略 · 工厂自动化 · 资源管理
+            </p>
+            <p class="text-gray-500 text-base md:text-lg mb-10 leading-relaxed max-w-2xl mx-auto">
+                一款融合塔防、工厂建造与即时战略的开源游戏，用传送带构建工业帝国，用炮塔抵御敌人入侵。
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="#about" class="px-8 py-3.5 bg-brand text-dark font-bold rounded-lg hover:bg-brand-light transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand/25">
+                    了解更多
+                </a>
+                <a href="https://github.com/Anuken/Mindustry" target="_blank" rel="noopener" class="px-8 py-3.5 border border-white/15 text-gray-300 font-semibold rounded-lg hover:border-brand/50 hover:text-brand transition-all duration-300">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        GitHub
+                    </span>
+                </a>
+            </div>
+            <div class="mt-16 animate-float">
+                <svg class="w-6 h-6 mx-auto text-brand/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                </svg>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 关于 Mindustry ==================== -->
+    <section id="about" class="section-alt py-24 md:py-32 px-6 relative">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">什么是 Mindustry？</h2>
+                <div class="w-16 h-1 bg-brand mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-500 max-w-lg mx-auto">一个融合塔防、工厂自动化与即时战略的开源杰作。</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+                <div class="space-y-5">
+                    <p class="text-gray-300 leading-relaxed text-lg">
+                        <strong class="text-brand">Mindustry</strong> 是一款由 <strong class="text-white">Anuken</strong> 开发的<span class="text-brand">开源</span>沙盒塔防游戏，融合了工厂自动化、资源管理与即时战略元素。
+                    </p>
+                    <p class="text-gray-400 leading-relaxed">
+                        玩家需要在行星上采集资源、建造传送带网络、部署防御炮塔，在抵御一波波敌人进攻的同时，不断扩展自己的工业基地。游戏拥有丰富的科技树、多样的炮塔与单位，以及强大的逻辑控制系统。
+                    </p>
+                    <p class="text-gray-400 leading-relaxed">
+                        支持<span class="text-brand font-semibold">单人战役</span>、<span class="text-brand font-semibold">多人协作</span>与<span class="text-brand font-semibold">PvP 对战</span>，更有活跃的社区创作大量 Mod 与自定义地图。完全免费且开源，可在 Windows、macOS、Linux、Android 和 iOS 上运行。
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="stat-card bg-dark-card border border-white/5 rounded-xl p-5 text-center">
+                        <div class="text-3xl font-extrabold text-brand mb-1">24k+</div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wider">GitHub Stars</div>
+                    </div>
+                    <div class="stat-card bg-dark-card border border-white/5 rounded-xl p-5 text-center">
+                        <div class="text-3xl font-extrabold text-brand mb-1">200+</div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wider">科技项目</div>
+                    </div>
+                    <div class="stat-card bg-dark-card border border-white/5 rounded-xl p-5 text-center">
+                        <div class="text-3xl font-extrabold text-brand mb-1">5</div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wider">支持平台</div>
+                    </div>
+                    <div class="stat-card bg-dark-card border border-white/5 rounded-xl p-5 text-center">
+                        <div class="text-3xl font-extrabold text-brand mb-1">∞</div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wider">Mod 扩展</div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12">
+                <div class="screenshot-wrapper border border-white/10">
+                    <img src="images/screen-overview.jpg" alt="Mindustry 游戏截图" class="w-full h-auto object-cover rounded-xl" loading="lazy">
+                    <div class="screenshot-overlay"><span>🔍 宏伟的工厂自动化基地</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 核心特色 ==================== -->
+    <section id="features" class="section-normal py-24 md:py-32 px-6 bg-dark-card/50">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">核心特色</h2>
+                <div class="w-16 h-1 bg-brand mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-500 max-w-lg mx-auto">Mindustry 将多种玩法深度融合，创造出独一无二的游戏体验。</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-7">
+                    <div class="feature-icon w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-5">
+                        <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3">塔防策略</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">部署数十种不同炮塔——从基础的双管炮到毁灭性的熔毁射线，每种炮塔都有独特的攻击方式与适用场景。合理安排防线，在敌人行军路线上一层层削弱他们。</p>
+                </div>
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-7">
+                    <div class="feature-icon w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-5">
+                        <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3">工厂自动化</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">像 Factorio 一样用传送带、管道、路由器搭建流水线。将矿石冶炼成金属，再加工为弹药与建筑材料，全自动供给前线炮塔。设计出高效的分拣与分配网络是游戏的核心乐趣。</p>
+                </div>
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-7">
+                    <div class="feature-icon w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-5">
+                        <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3">逻辑控制系统</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">内置微型处理器系统，支持可视化编程。用逻辑处理器控制炮塔开关、监测资源库存、自动调节生产线。甚至可以编写简单的 AI 来管理无人机群。</p>
+                </div>
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-7">
+                    <div class="feature-icon w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-5">
+                        <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3">多星球探索</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">在 Serpulo 和 Erekir 两颗行星上展开冒险。每个星球拥有截然不同的资源体系、科技树与敌人。攻克一个个区域，将生产成果带回核心基地解锁更高级科技。</p>
+                </div>
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-7">
+                    <div class="feature-icon w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-5">
+                        <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3">多人联机</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">支持最多 16 名玩家同时在线。合作模式下共同建设与防御，PvP 模式下互相攻伐。支持专用服务器与局域网联机，延迟低、体验流畅。</p>
+                </div>
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-7">
+                    <div class="feature-icon w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-5">
+                        <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3">Mod 与社区</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">完全开源，拥有极其活跃的 Mod 社区。通过内置 Mod 浏览器一键安装各种内容扩展——新炮塔、新单位、新星球、甚至全新玩法模式。支持 Java 和 JSON 编写 Mod。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 玩法机制 ==================== -->
+    <section id="gameplay" class="section-alt py-24 md:py-32 px-6">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">核心玩法机制</h2>
+                <div class="w-16 h-1 bg-brand mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-500 max-w-lg mx-auto">从零开始，一步步打造你的自动化帝国。</p>
+            </div>
+
+            <div class="space-y-6 relative">
+                <div class="hidden md:block timeline-line"></div>
+                <div class="flex flex-col md:flex-row gap-6 items-start bg-dark border border-white/5 rounded-2xl p-7 relative">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">1</div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-white mb-2">采集与冶炼</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">使用钻头开采铜、铅、钛、钍等矿石，通过传送带运往熔炉冶炼成金属锭。不同矿石需要不同的开采与冶炼设备，合理布局是关键。</p>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-6 items-start bg-dark border border-white/5 rounded-2xl p-7 relative">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">2</div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-white mb-2">生产与供应链</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">将金属锭进一步加工为弹药、建筑材料与高级组件。用路由器、分拣器与桥接传送带构建复杂的物流网络。平衡生产与消耗，避免资源瓶颈。</p>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-6 items-start bg-dark border border-white/5 rounded-2xl p-7 relative">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">3</div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-white mb-2">防御与战斗</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">敌人会从固定路线（或空中）进攻你的核心。用墙壁阻挡、炮塔输出、修补无人机维修，构建多层立体防线。不同敌人有不同的抗性与弱点，需要针对性地搭配炮塔类型。</p>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-6 items-start bg-dark border border-white/5 rounded-2xl p-7 relative">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-brand/15 flex items-center justify-center text-brand font-bold text-lg">4</div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-white mb-2">科技与扩张</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">通过科技树解锁更高级的炮塔、单位与工厂设备。派遣单位攻占敌方基地，或发射资源到轨道以解锁全局升级。逐步从一个小型前哨站发展为行星级工业帝国。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 游戏截图 ==================== -->
+    <section id="screenshots" class="section-normal py-24 md:py-32 px-6">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">游戏截图</h2>
+                <div class="w-16 h-1 bg-brand mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-500 max-w-lg mx-auto">一窥 Mindustry 中纷繁复杂的工业帝国与激烈战斗。</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="screenshot-wrapper border border-white/10 h-64 md:h-72">
+                    <img src="images/screen-factory.jpg" alt="工厂传送带网络" class="w-full h-full object-cover" loading="lazy">
+                    <div class="screenshot-overlay"><span>🏭 精密传送带供应链</span></div>
+                </div>
+                <div class="screenshot-wrapper border border-white/10 h-64 md:h-72">
+                    <img src="images/screen-battle.jpg" alt="激烈战斗场景" class="w-full h-full object-cover" loading="lazy">
+                    <div class="screenshot-overlay"><span>⚔️ 激烈防御战</span></div>
+                </div>
+                <div class="screenshot-wrapper border border-white/10 h-64 md:h-72">
+                    <img src="images/screen-defense.jpg" alt="炮塔防线" class="w-full h-full object-cover" loading="lazy">
+                    <div class="screenshot-overlay"><span>🛡️ 多层立体防线</span></div>
+                </div>
+                <div class="screenshot-wrapper border border-white/10 h-64 md:h-72">
+                    <img src="images/screen-base.jpg" alt="工业基地全景" class="w-full h-full object-cover" loading="lazy">
+                    <div class="screenshot-overlay"><span>🏗️ 行星级工业基地</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 炮塔展示 ==================== -->
+    <section class="section-alt py-24 md:py-32 px-6 bg-dark-card/50 relative">
+        <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/20 to-transparent"></div>
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">标志性炮塔</h2>
+                <div class="w-16 h-1 bg-brand mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-500 max-w-lg mx-auto">从入门到毕业，每种炮塔都有它的高光时刻。</p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-5 text-center">
+                    <div class="turret-icon w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center mx-auto mb-3">
+                        <img src="images/turret-duo.png" alt="双管炮" class="w-12 h-12 pixel-art">
+                    </div>
+                    <h4 class="text-white font-bold mb-1">双管炮</h4>
+                    <p class="text-gray-500 text-xs">Duo</p>
+                    <p class="text-gray-400 text-xs mt-2 leading-relaxed">入门级炮塔，廉价可靠，适合前期防御</p>
+                </div>
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-5 text-center">
+                    <div class="turret-icon w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center mx-auto mb-3">
+                        <img src="images/turret-arc.png" alt="电弧炮" class="w-12 h-12 pixel-art">
+                    </div>
+                    <h4 class="text-white font-bold mb-1">电弧炮</h4>
+                    <p class="text-gray-500 text-xs">Arc</p>
+                    <p class="text-gray-400 text-xs mt-2 leading-relaxed">闪电链攻击，对密集敌群效果拔群</p>
+                </div>
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-5 text-center">
+                    <div class="turret-icon w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center mx-auto mb-3">
+                        <img src="images/turret-meltdown.png" alt="熔毁射线" class="w-12 h-12 pixel-art">
+                    </div>
+                    <h4 class="text-white font-bold mb-1">熔毁射线</h4>
+                    <p class="text-gray-500 text-xs">Meltdown</p>
+                    <p class="text-gray-400 text-xs mt-2 leading-relaxed">终极能量武器，持续激光融化一切</p>
+                </div>
+                <div class="card-hover bg-dark border border-white/5 rounded-2xl p-5 text-center">
+                    <div class="turret-icon w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center mx-auto mb-3">
+                        <img src="images/turret-spectre.png" alt="幽灵炮" class="w-12 h-12 pixel-art">
+                    </div>
+                    <h4 class="text-white font-bold mb-1">幽灵炮</h4>
+                    <p class="text-gray-500 text-xs">Spectre</p>
+                    <p class="text-gray-400 text-xs mt-2 leading-relaxed">高射速大范围压制，要塞防御核心</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 资源与链接 ==================== -->
+    <section id="links" class="section-normal py-24 md:py-32 px-6">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">获取资源</h2>
+                <div class="w-16 h-1 bg-brand mx-auto rounded-full mb-4"></div>
+                <p class="text-gray-500 max-w-lg mx-auto">开源的 Mindustry 完全免费，在以下平台均可获取。</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <a href="https://github.com/Anuken/Mindustry/releases" target="_blank" rel="noopener" class="card-hover flex flex-col items-center gap-4 p-8 bg-dark border border-white/5 rounded-2xl text-center group">
+                    <svg class="w-10 h-10 text-brand group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    <span class="text-white font-bold">GitHub Releases</span>
+                    <span class="text-gray-500 text-sm">获取最新版本与更新日志</span>
+                </a>
+                <a href="https://anuken.github.io/" target="_blank" rel="noopener" class="card-hover flex flex-col items-center gap-4 p-8 bg-dark border border-white/5 rounded-2xl text-center group">
+                    <svg class="w-10 h-10 text-brand group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                    <span class="text-white font-bold">官方网站</span>
+                    <span class="text-gray-500 text-sm">在线试玩与完整 Wiki 文档</span>
+                </a>
+                <a href="https://steamcommunity.com/app/1127400/workshop/" target="_blank" rel="noopener" class="card-hover flex flex-col items-center gap-4 p-8 bg-dark border border-white/5 rounded-2xl text-center group">
+                    <svg class="w-10 h-10 text-brand group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    <span class="text-white font-bold">创意工坊</span>
+                    <span class="text-gray-500 text-sm">海量 Mod、地图与蓝图</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 页脚 ==================== -->
+    <footer class="section-alt py-12 px-6 border-t border-white/5">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3 text-gray-500 text-sm">
+                <img src="images/logo.png" alt="" class="h-4 w-auto pixel-art opacity-40">
+            </div>
+            <p class="text-gray-600 text-xs">
+                Mindustry &copy; Anuken — 开源 (GPLv3) · 本页面仅为爱好者介绍
+            </p>
+        </div>
+    </footer>
+
+    <!-- ==================== 原生 JavaScript ==================== -->
+    <script>
+        (function () {
+            'use strict';
+
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let width, height;
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            const PARTICLE_COUNT = Math.min(60, Math.floor((width * height) / 18000));
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.3 - 0.15,
+                    size: Math.random() * 2 + 0.8,
+                    alpha: Math.random() * 0.5 + 0.15,
+                    pulse: Math.random() * Math.PI * 2,
+                    pulseSpeed: Math.random() * 0.02 + 0.008
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+                particles.forEach(function (p) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.pulse += p.pulseSpeed;
+
+                    if (p.x < -20) p.x = width + 20;
+                    if (p.x > width + 20) p.x = -20;
+                    if (p.y < -20) p.y = height + 20;
+                    if (p.y > height + 20) p.y = -20;
+
+                    var flicker = p.alpha + Math.sin(p.pulse) * 0.12;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(244,169,80,' + Math.max(0, flicker) + ')';
+                    ctx.fill();
+                });
+
+                for (var i = 0; i < particles.length; i++) {
+                    for (var j = i + 1; j < particles.length; j++) {
+                        var dx = particles[i].x - particles[j].x;
+                        var dy = particles[i].y - particles[j].y;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 100) {
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = 'rgba(244,169,80,' + (0.08 * (1 - dist / 100)).toFixed(3) + ')';
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                requestAnimationFrame(draw);
+            }
+            draw();
+
+            const navbar = document.getElementById('navbar');
+            const menuToggle = document.getElementById('menu-toggle');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const mobileLinks = document.querySelectorAll('.mobile-link');
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            // 导航栏滚动阴影
+            function updateNavShadow() {
+                navbar.classList.toggle('nav-scrolled', window.scrollY > 10);
+            }
+            window.addEventListener('scroll', updateNavShadow, { passive: true });
+
+            // 滚动高亮当前导航
+            function highlightNav() {
+                let current = '';
+                sections.forEach(function (section) {
+                    if (window.scrollY >= section.offsetTop - 120) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                navLinks.forEach(function (link) {
+                    link.classList.remove('active', 'text-brand');
+                    if (link.getAttribute('href') === '#' + current) {
+                        link.classList.add('active', 'text-brand');
+                    }
+                });
+            }
+            window.addEventListener('scroll', highlightNav, { passive: true });
+
+            // 移动端菜单
+            menuToggle.addEventListener('click', function () {
+                mobileMenu.classList.toggle('open');
+            });
+            mobileLinks.forEach(function (link) {
+                link.addEventListener('click', function () {
+                    mobileMenu.classList.remove('open');
+                });
+            });
+            document.addEventListener('click', function (e) {
+                if (!menuToggle.contains(e.target) && !mobileMenu.contains(e.target)) {
+                    mobileMenu.classList.remove('open');
+                }
+            });
+
+            // 初始化
+            updateNavShadow();
