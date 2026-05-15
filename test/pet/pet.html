@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的虚拟宠物</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 50%, #ffc3a0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 107, 157, 0.1) 0%, transparent 50%);
+            animation: floatBackground 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 10%;
+            left: 10%;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: sparkle 4s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes floatBackground {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+        }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+
+        .container {
+            background: linear-gradient(180deg, #ffffff 0%, #fff5f8 100%);
+            border-radius: 35px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.15),
+                0 0 40px rgba(255, 107, 157, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '🐾';
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 2em;
+            opacity: 0.3;
+            transform: rotate(15deg);
+        }
+
+        .container::after {
+            content: '💕';
+            position: absolute;
+            bottom: 20px;
+            left: 15px;
+            font-size: 1.5em;
+            opacity: 0.3;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            color: #FF6B9D;
+            font-size: 2.2em;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(255, 107, 157, 0.3);
+        }
+
+        .subtitle {
+            color: #FF9F43;
+            font-size: 1.1em;
+        }
+
+        .pet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #fff5f5 0%, #fff0f5 100%);
+            border-radius: 20px;
+        }
+
+        .level-badge {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        }
+
+        .exp-bar-container {
+            flex: 1;
+            margin-left: 15px;
+        }
+
+        .exp-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .exp-bar {
+            height: 8px;
+            background: #ffe0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .exp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .pet-container {
+            background: linear-gradient(180deg, #e8f5e9 0%, #fff3e0 50%, #fff5f5 100%);
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 20px;
+            position: relative;
+            min-height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 
+                inset 0 2px 10px rgba(0, 0, 0, 0.05),
+                0 5px 20px rgba(139, 195, 74, 0.2);
+        }
+
+        .pet-container::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(180deg, transparent, rgba(139, 195, 74, 0.4));
+            border-radius: 0 0 25px 25px;
+        }
+
+        .pet-container::after {
+            content: '🌿🌿';
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            font-size: 1.5em;
+            opacity: 0.5;
+            animation: sway 3s ease-in-out infinite;
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        .pet {
+            font-size: 150px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            z-index: 1;
+            animation: idle 2s ease-in-out infinite;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+            cursor: pointer;
+        }
+
+        .pet:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 15px 30px rgba(255, 107, 157, 0.3));
+        }
+
+        .thought-bubble {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 1.2em;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            animation: bubble 0.5s ease-out;
+            max-width: 120px;
+        }
+
+        .thought-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: 20px;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid white;
+        }
+
+        @keyframes bubble {
+            0% { opacity: 0; transform: scale(0.5) translateY(-10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .mood-text {
+            text-align: center;
+            font-size: 1.2em;
+            color: #FF6B9D;
+            margin-bottom: 20px;
+            min-height: 35px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .mood-text.fade-out {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+
+        .mood-text.fade-in {
+            animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(10px);
+            }
+            50% {
+                transform: scale(1.05) translateY(-2px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .status-display {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .decision-display {
+            background: linear-gradient(135deg, rgba(165, 94, 234, 0.1), rgba(102, 126, 234, 0.1));
+            border: 2px dashed rgba(165, 94, 234, 0.3);
+            border-radius: 20px;
+            padding: 15px 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            animation: decisionAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes decisionAppear {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(-10px);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .decision-display.fade-out {
+            animation: decisionDisappear 0.3s ease-out forwards;
+        }
+
+        @keyframes decisionDisappear {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.9) translateY(-5px);
+            }
+        }
+
+        .decision-icon {
+            font-size: 1.5em;
+            animation: sparkle 1s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+        }
+
+        .decision-text {
+            font-size: 1.3em;
+            color: #6C5CE7;
+            font-weight: bold;
+            background: linear-gradient(135deg, #6C5CE7, #A55EEA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .change-pet-link {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .change-pet-link a {
+            display: inline-block;
+            background: linear-gradient(135deg, #fff5f5 0%, #fff0f5 100%);
+            border: 2px solid #FF6B9D;
+            border-radius: 20px;
+            padding: 10px 25px;
+            color: #FF6B9D;
+            text-decoration: none;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .change-pet-link a:hover {
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 157, 0.4);
+        }
+
+        .status-panel {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, #fff5f5 0%, #fff0f5 100%);
+            border-radius: 18px;
+            padding: 15px 10px;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 107, 157, 0.1);
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255, 107, 157, 0.3), transparent);
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 
+                0 15px 30px rgba(0, 0, 0, 0.12),
+                0 0 20px rgba(255, 107, 157, 0.15);
+        }
+
+        .status-emoji { 
+            font-size: 1.6em; 
+            margin-bottom: 6px; 
+            display: inline-block;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .status-label { 
+            color: #666; 
+            font-size: 0.75em; 
+            margin-bottom: 6px; 
+            font-weight: bold;
+        }
+
+        .status-bar {
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(90deg, #ffe0e0, #fff0f0);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 4px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .status-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .status-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent);
+            border-radius: 5px;
+        }
+
+        .status-fill.hunger { background: linear-gradient(90deg, #FF9F43, #FF6B6B); }
+        .status-fill.happiness { background: linear-gradient(90deg, #FF6B9D, #C44569); }
+        .status-fill.cleanliness { background: linear-gradient(90deg, #48DBFB, #0ABDE3); }
+        .status-fill.energy { background: linear-gradient(90deg, #1DD1A1, #10AC84); }
+
+        .status-value { 
+            font-size: 0.75em; 
+            color: #888; 
+            font-weight: bold;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #FF9F43, #FF6B6B);
+            border: none;
+            border-radius: 20px;
+            padding: 18px 12px;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 0.95em;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 
+                0 8px 20px rgba(255, 107, 107, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+        }
+
+        .action-btn:hover { 
+            transform: translateY(-6px) scale(1.02); 
+            box-shadow: 
+                0 15px 30px rgba(255, 107, 107, 0.5),
+                0 0 20px rgba(255, 255, 255, 0.3);
+        }
+        .action-btn:active { transform: translateY(-3px) scale(0.98); }
+
+        .btn-emoji { 
+            font-size: 2em; 
+            transition: transform 0.3s ease;
+        }
+
+        .action-btn:hover .btn-emoji {
+            transform: scale(1.2);
+        }
+
+        .action-btn:nth-child(2) { 
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+            box-shadow: 0 8px 20px rgba(255, 107, 157, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+        .action-btn:nth-child(2):hover { box-shadow: 0 15px 30px rgba(255, 107, 157, 0.5), 0 0 20px rgba(255, 255, 255, 0.3); }
+        
+        .action-btn:nth-child(3) { 
+            background: linear-gradient(135deg, #48DBFB, #0ABDE3);
+            box-shadow: 0 8px 20px rgba(72, 219, 251, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+        .action-btn:nth-child(3):hover { box-shadow: 0 15px 30px rgba(72, 219, 251, 0.5), 0 0 20px rgba(255, 255, 255, 0.3); }
+        
+        .action-btn:nth-child(4) { 
+            background: linear-gradient(135deg, #1DD1A1, #10AC84);
+            box-shadow: 0 8px 20px rgba(29, 209, 161, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+        .action-btn:nth-child(4):hover { box-shadow: 0 15px 30px rgba(29, 209, 161, 0.5), 0 0 20px rgba(255, 255, 255, 0.3); }
+        
+        .action-btn:nth-child(5) { 
+            background: linear-gradient(135deg, #A55EEA, #6C5CE7);
+            box-shadow: 0 8px 20px rgba(165, 94, 234, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+        .action-btn:nth-child(5):hover { box-shadow: 0 15px 30px rgba(165, 94, 234, 0.5), 0 0 20px rgba(255, 255, 255, 0.3); }
+        
+        .action-btn:nth-child(6) { 
+            background: linear-gradient(135deg, #00CEC9, #0984E3);
+            box-shadow: 0 8px 20px rgba(0, 206, 201, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+        .action-btn:nth-child(6):hover { box-shadow: 0 15px 30px rgba(0, 206, 201, 0.5), 0 0 20px rgba(255, 255, 255, 0.3); }
+
+        .extra-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .feature-btn {
+            background: linear-gradient(135deg, #fff5f5 0%, #fff0f5 100%);
+            border: 2px solid #FF6B9D;
+            border-radius: 18px;
+            padding: 15px;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 1em;
+            color: #FF6B9D;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-btn:hover {
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 157, 0.4);
+        }
+
+        .feature-emoji { font-size: 1.5em; }
+
+        .mood-checkin {
+            margin-top: 15px;
+        }
+
+        .checkin-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FFD93D, #FF9500);
+            border: none;
+            border-radius: 20px;
+            padding: 18px;
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 8px 25px rgba(255, 217, 61, 0.4);
+        }
+
+        .checkin-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(255, 217, 61, 0.5);
+        }
+
+        .checkin-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .checkin-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .calendar-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667EEA, #764BA2);
+            border: none;
+            border-radius: 20px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Comic Sans MS', cursive;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .calendar-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+        }
+
+        .calendar-icon {
+            font-size: 1.5em;
+        }
+
+        .calendar-text {
+            font-size: 1em;
+            font-weight: bold;
+        }
+
+        .calendar-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+            padding: 20px;
+        }
+
+        .calendar-content {
+            background: white;
+            border-radius: 25px;
+            padding: 25px;
+            max-width: 420px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-title {
+            font-size: 1.3em;
+            color: #FF6B9D;
+            font-weight: bold;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, #fff5f5 0%, #fff0f5 100%);
+            border: 2px solid #FF6B9D;
+            border-radius: 10px;
+            padding: 8px 15px;
+            color: #FF6B9D;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #FF6B9D;
+            color: white;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .calendar-day-name {
+            text-align: center;
+            font-size: 0.85em;
+            color: #888;
+            padding: 8px 0;
+            font-weight: bold;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9em;
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            background: #ffe0e0;
+        }
+
+        .calendar-day.other-month {
+            color: #ccc;
+            background: transparent;
+            cursor: default;
+        }
+
+        .calendar-day.today {
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+            color: white;
+        }
+
+        .calendar-day.checked {
+            background: linear-gradient(135deg, #1DD1A1, #10AC84);
+            color: white;
+        }
+
+        .calendar-day.checked.today {
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+        }
+
+        .calendar-day .mood-badge {
+            position: absolute;
+            bottom: 1px;
+            right: 1px;
+            font-size: 0.7em;
+        }
+
+        .calendar-summary {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .summary-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #FF6B9D;
+        }
+
+        .summary-label {
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        .close-calendar {
+            margin-top: 20px;
+            width: 100%;
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+            border: none;
+            border-radius: 15px;
+            padding: 12px;
+            color: white;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close-calendar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 157, 0.4);
+        }
+
+        .checkin-icon {
+            font-size: 1.8em;
+        }
+
+        .checkin-text {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .checkin-streak {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+
+        .checkin-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .checkin-content {
+            background: white;
+            border-radius: 25px;
+            padding: 35px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .checkin-title {
+            font-size: 1.5em;
+            color: #FF6B9D;
+            margin-bottom: 25px;
+        }
+
+        .mood-options {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .mood-option {
+            background: linear-gradient(135deg, #fff5f5 0%, #fff0f5 100%);
+            border: 3px solid transparent;
+            border-radius: 15px;
+            padding: 15px 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.6em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 1;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .mood-option:hover {
+            transform: scale(1.05);
+            border-color: #FF6B9D;
+        }
+
+        .mood-option.selected {
+            border-color: #FF6B9D;
+            background: linear-gradient(135deg, #ffe0e0 0%, #ffd6e0 100%);
+            transform: scale(1.08);
+        }
+
+        .checkin-submit {
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+            border: none;
+            border-radius: 20px;
+            padding: 12px 40px;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 1.1em;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(255, 107, 157, 0.4);
+        }
+
+        .checkin-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 157, 0.5);
+        }
+
+        .checkin-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .checkin-success {
+            font-size: 1.2em;
+            color: #1DD1A1;
+            margin-top: 20px;
+        }
+
+        .event-notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-family: 'Comic Sans MS', cursive;
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.5);
+            animation: slideUp 0.5s ease-out;
+            z-index: 100;
+        }
+
+        @keyframes slideUp {
+            0% { opacity: 0; transform: translateX(-50%) translateY(50px); }
+            100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        .pet.feeding { animation: feeding 0.5s ease-in-out 3; }
+        .pet.playing { animation: playing 0.3s ease-in-out 4; }
+        .pet.bathing { animation: bathing 0.6s ease-in-out 3; }
+        .pet.sleeping { animation: sleeping 3s ease-in-out infinite; }
+        .pet.sad { filter: grayscale(30%); }
+        .pet.happy { animation: happy 0.5s ease-in-out 2; }
+        .pet.petting { animation: petting 0.4s ease-in-out 3; }
+        .pet.training { animation: training 0.3s ease-in-out 5; }
+
+        @keyframes idle {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        @keyframes feeding {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        @keyframes playing {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            25% { transform: translateX(20px) rotate(10deg); }
+            75% { transform: translateX(-20px) rotate(-10deg); }
+        }
+
+        @keyframes bathing {
+            0%, 100% { filter: brightness(1) saturate(1); }
+            50% { filter: brightness(1.2) saturate(1.3) hue-rotate(180deg); }
+        }
+
+        @keyframes sleeping {
+            0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+            50% { transform: scale(0.95) rotate(-5deg); opacity: 0.9; }
+        }
+
+        @keyframes happy {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-15px) rotate(-5deg); }
+            75% { transform: translateY(-15px) rotate(5deg); }
+        }
+
+        @keyframes petting {
+            0%, 100% { transform: rotate(-5deg) scale(1); }
+            50% { transform: rotate(5deg) scale(1.05); }
+        }
+
+        @keyframes training {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(15px); }
+            75% { transform: translateX(-15px); }
+        }
+
+        .sparkles {
+            position: absolute;
+            font-size: 20px;
+            pointer-events: none;
+            animation: sparkle 1s ease-out forwards;
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(0); }
+        }
+
+        .photo-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .photo-content {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .photo-preview {
+            font-size: 120px;
+            margin-bottom: 20px;
+        }
+
+        .photo-caption {
+            font-size: 1.2em;
+            color: #FF6B9D;
+            margin-bottom: 20px;
+        }
+
+        .photo-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .photo-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 20px;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .photo-btn.confirm {
+            background: linear-gradient(135deg, #FF6B9D, #C44569);
+            color: white;
+        }
+
+        .photo-btn.cancel {
+            background: #eee;
+            color: #666;
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 20px; }
+            h1 { font-size: 1.8em; }
+            .pet { font-size: 100px; }
+            .status-panel { grid-template-columns: repeat(2, 1fr); }
+            .action-buttons { grid-template-columns: repeat(2, 1fr); }
+            .extra-features { grid-template-columns: 1fr; }
+            .pet-header { flex-direction: column; gap: 10px; }
+            .exp-bar-container { margin-left: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐾 我的小宠物 🐾</h1>
+            <p class="subtitle" id="petName">快来和可爱的小猫咪一起玩耍吧！</p>
+        </div>
+
+        <div class="pet-header">
+            <div class="level-badge" id="levelBadge">Lv.1</div>
+            <div class="exp-bar-container">
+                <div class="exp-label" id="expLabel">经验值: 0/100</div>
+                <div class="exp-bar">
+                    <div class="exp-fill" id="expBar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pet-container" id="petContainer">
+            <div class="pet" id="pet">🐱</div>
+            <div class="thought-bubble" id="thoughtBubble" style="display: none;">🍖</div>
+        </div>
+
+        <div class="status-display">
+            <div class="mood-text" id="moodText">喵~ 今天心情不错！</div>
+        </div>
+
+        <div class="decision-display" id="decisionDisplay" style="display: none;">
+            <div class="decision-icon">🔮</div>
+            <div class="decision-text" id="decisionText"></div>
+        </div>
+
+        <div class="change-pet-link">
+            <a href="select-pet.html">🔄 更换宠物</a>
+        </div>
+
+        <div class="status-panel">
+            <div class="status-card">
+                <div class="status-emoji">🍖</div>
+                <div class="status-label">饥饿度</div>
+                <div class="status-bar"><div class="status-fill hunger" id="hungerBar"></div></div>
+                <div class="status-value" id="hungerValue">70%</div>
+            </div>
+            <div class="status-card">
+                <div class="status-emoji">😊</div>
+                <div class="status-label">快乐度</div>
+                <div class="status-bar"><div class="status-fill happiness" id="happinessBar"></div></div>
+                <div class="status-value" id="happinessValue">70%</div>
+            </div>
+            <div class="status-card">
+                <div class="status-emoji">🛁</div>
+                <div class="status-label">清洁度</div>
+                <div class="status-bar"><div class="status-fill cleanliness" id="cleanlinessBar"></div></div>
+                <div class="status-value" id="cleanlinessValue">70%</div>
+            </div>
+            <div class="status-card">
+                <div class="status-emoji">💤</div>
+                <div class="status-label">精力值</div>
+                <div class="status-bar"><div class="status-fill energy" id="energyBar"></div></div>
+                <div class="status-value" id="energyValue">70%</div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="action-btn" id="feedBtn"><span class="btn-emoji">🍖</span><span>喂食</span></button>
+            <button class="action-btn" id="playBtn"><span class="btn-emoji">🎾</span><span>玩耍</span></button>
+            <button class="action-btn" id="batheBtn"><span class="btn-emoji">🛁</span><span>洗澡</span></button>
+            <button class="action-btn" id="sleepBtn"><span class="btn-emoji">😴</span><span>睡觉</span></button>
+            <button class="action-btn" id="petBtn"><span class="btn-emoji">💕</span><span>抚摸</span></button>
+            <button class="action-btn" id="trainBtn"><span class="btn-emoji">🏋️</span><span>训练</span></button>
+        </div>
+
+        <div class="extra-features">
+            <button class="feature-btn" id="giftBtn"><span class="feature-emoji">🎁</span><span>赠送礼物</span></button>
+        </div>
+
+        <div class="mood-checkin">
+            <button class="checkin-btn" id="checkinBtn">
+                <span class="checkin-icon">📝</span>
+                <span class="checkin-text">今日心情打卡</span>
+                <span class="checkin-streak" id="checkinStreak">连续 0 天</span>
+            </button>
+            <button class="calendar-btn" id="calendarBtn">
+                <span class="calendar-icon">📅</span>
+                <span class="calendar-text">打卡日历</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const pets = {
+            cat: { emoji: '🐱', name: '猫咪', sounds: { feed: '喵喵~', play: '喵呜~', bathe: '咪呀~', sleep: '呼噜~', happy: '喵~', sad: '喵...', pet: '咕噜~', train: '喵！' } },
+            dog: { emoji: '🐶', name: '狗狗', sounds: { feed: '汪汪~', play: '汪！汪！', bathe: '呜~', sleep: '呼呼~', happy: '旺~', sad: '呜呜...', pet: '摇尾巴~', train: '汪！' } },
+            rabbit: { emoji: '🐰', name: '兔子', sounds: { feed: '吧唧~', play: '蹦蹦~', bathe: '抖抖~', sleep: '滋滋~', happy: '跳跳~', sad: '缩缩...', pet: '蹭蹭~', train: '蹦！' } },
+            hamster: { emoji: '🐹', name: '仓鼠', sounds: { feed: '嗑嗑~', play: '跑跑~', bathe: '滚滚~', sleep: '吱吱~', happy: '转转~', sad: '瑟瑟...', pet: '啾啾~', train: '吱！' } },
+            bird: { emoji: '🐦', name: '小鸟', sounds: { feed: '啾啾~', play: '喳喳~', bathe: '扑扑~', sleep: '咕咕~', happy: '唱歌~', sad: '哀鸣...', pet: '啾~', train: '鸣！' } },
+            panda: { emoji: '🐼', name: '熊猫', sounds: { feed: '吧嗒~', play: '滚滚~', bathe: '泡~', sleep: '呼呼~', happy: '摇摆~', sad: '趴趴...', pet: '蹭蹭~', train: '滚！' } }
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedPetFromUrl = urlParams.get('pet');
+        let currentPet = pets[selectedPetFromUrl] ? selectedPetFromUrl : 'cat';
+
+        const petData = { hunger: 70, happiness: 70, cleanliness: 70, energy: 70 };
+        const levelData = { level: 1, exp: 0 };
+
+        const petElement = document.getElementById('pet');
+        const moodText = document.getElementById('moodText');
+        const petContainer = document.getElementById('petContainer');
+        const thoughtBubble = document.getElementById('thoughtBubble');
+        const petNameElement = document.getElementById('petName');
+        const levelBadge = document.getElementById('levelBadge');
+        const expLabel = document.getElementById('expLabel');
+        const expBar = document.getElementById('expBar');
+
+        const hungerBar = document.getElementById('hungerBar');
+        const happinessBar = document.getElementById('happinessBar');
+        const cleanlinessBar = document.getElementById('cleanlinessBar');
+        const energyBar = document.getElementById('energyBar');
+
+        const hungerValue = document.getElementById('hungerValue');
+        const happinessValue = document.getElementById('happinessValue');
+        const cleanlinessValue = document.getElementById('cleanlinessValue');
+        const energyValue = document.getElementById('energyValue');
+
+        const feedBtn = document.getElementById('feedBtn');
+        const playBtn = document.getElementById('playBtn');
+        const batheBtn = document.getElementById('batheBtn');
+        const sleepBtn = document.getElementById('sleepBtn');
+        const petBtn = document.getElementById('petBtn');
+        const trainBtn = document.getElementById('trainBtn');
+        const giftBtn = document.getElementById('giftBtn');
+
+        const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+
+        const showNotification = (text) => {
+            const notification = document.createElement('div');
+            notification.className = 'event-notification';
+            notification.textContent = text;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        };
+
+        const addExp = (amount) => {
+            levelData.exp += amount;
+            const expNeeded = levelData.level * 100;
+            
+            if (levelData.exp >= expNeeded) {
+                levelData.exp -= expNeeded;
+                levelData.level++;
+                showNotification(`🎉 ${pets[currentPet].name}升级了！当前等级: Lv.${levelData.level}`);
+            }
+            
+            expBar.style.width = `${(levelData.exp / expNeeded) * 100}%`;
+            levelBadge.textContent = `Lv.${levelData.level}`;
+            expLabel.textContent = `经验值: ${levelData.exp}/${expNeeded}`;
+        };
+
+        const addSparkles = () => {
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('span');
+                    sparkle.className = 'sparkles';
+                    sparkle.textContent = ['✨', '🌟', '💫'][Math.floor(Math.random() * 3)];
+                    sparkle.style.left = `${Math.random() * 80 + 10}%`;
+                    sparkle.style.top = `${Math.random() * 60}%`;
+                    petContainer.appendChild(sparkle);
+                    setTimeout(() => sparkle.remove(), 1000);
+                }, i * 200);
+            }
+        };
+
+        const showThought = (emoji) => {
+            thoughtBubble.textContent = emoji;
+            thoughtBubble.style.display = 'block';
+            setTimeout(() => thoughtBubble.style.display = 'none', 2000);
+        };
+
+        const updateStatus = () => {
+            hungerBar.style.width = `${petData.hunger}%`;
+            happinessBar.style.width = `${petData.happiness}%`;
+            cleanlinessBar.style.width = `${petData.cleanliness}%`;
+            energyBar.style.width = `${petData.energy}%`;
+
+            hungerValue.textContent = `${Math.round(petData.hunger)}%`;
+            happinessValue.textContent = `${Math.round(petData.happiness)}%`;
+            cleanlinessValue.textContent = `${Math.round(petData.cleanliness)}%`;
+            energyValue.textContent = `${Math.round(petData.energy)}%`;
+
+            updateMood();
+        };
+
+        const updateMood = () => {
+            const avg = (petData.hunger + petData.happiness + petData.cleanliness + petData.energy) / 4;
+            const sounds = pets[currentPet].sounds;
+            
+            if (avg > 80) {
+                moodText.textContent = `😸 ${sounds.happy} 超级开心！`;
+                petElement.classList.remove('sad');
+                setTimeout(() => petElement.classList.add('happy'), 100);
+            } else if (avg > 50) {
+                moodText.textContent = `😺 ${sounds.happy} 今天心情不错！`;
+                petElement.classList.remove('sad', 'happy');
+            } else if (avg > 30) {
+                moodText.textContent = `😿 ${sounds.sad} 有点不舒服...`;
+                petElement.classList.add('sad');
+            } else {
+                moodText.textContent = `😾 ${sounds.sad} 需要照顾！`;
+                petElement.classList.add('sad');
+            }
+
+            if (petData.hunger < 30) showThought('🍖');
+            else if (petData.happiness < 30) showThought('🎾');
+            else if (petData.cleanliness < 30) showThought('🛁');
+            else if (petData.energy < 30) showThought('😴');
+        };
+
+        const feed = () => {
+            petData.hunger = clamp(petData.hunger + 25, 0, 100);
+            petData.happiness = clamp(petData.happiness - 5, 0, 100);
+            petData.energy = clamp(petData.energy - 3, 0, 100);
+            
+            petElement.classList.remove('playing', 'bathing', 'sleeping', 'petting', 'training');
+            petElement.classList.add('feeding');
+            moodText.textContent = `🍖 ${pets[currentPet].sounds.feed} 真好吃！`;
+            
+            setTimeout(() => {
+                petElement.classList.remove('feeding');
+                addSparkles();
+                addExp(5);
+                updateStatus();
+            }, 1500);
+        };
+
+        const play = () => {
+            if (petData.energy < 10) {
+                moodText.textContent = '😴 太累了，想睡觉...';
+                showThought('😴');
+                return;
+            }
+            
+            petData.happiness = clamp(petData.happiness + 25, 0, 100);
+            petData.energy = clamp(petData.energy - 20, 0, 100);
+            petData.cleanliness = clamp(petData.cleanliness - 10, 0, 100);
+            petData.hunger = clamp(petData.hunger - 5, 0, 100);
+            
+            petElement.classList.remove('feeding', 'bathing', 'sleeping', 'petting', 'training');
+            petElement.classList.add('playing');
+            moodText.textContent = `🎾 ${pets[currentPet].sounds.play} 玩得好开心！`;
+            
+            setTimeout(() => {
+                petElement.classList.remove('playing');
+                addSparkles();
+                addExp(8);
+                updateStatus();
+            }, 1200);
+        };
+
+        const bathe = () => {
+            petData.cleanliness = clamp(petData.cleanliness + 30, 0, 100);
+            petData.happiness = clamp(petData.happiness - 10, 0, 100);
+            
+            petElement.classList.remove('feeding', 'playing', 'sleeping', 'petting', 'training');
+            petElement.classList.add('bathing');
+            moodText.textContent = `🛁 ${pets[currentPet].sounds.bathe} 有点凉！`;
+            
+            setTimeout(() => {
+                petElement.classList.remove('bathing');
+                addSparkles();
+                addExp(3);
+                updateStatus();
+            }, 1800);
+        };
+
+        const sleep = () => {
+            petData.energy = clamp(petData.energy + 35, 0, 100);
+            petData.hunger = clamp(petData.hunger - 15, 0, 100);
+            
+            petElement.classList.remove('feeding', 'playing', 'bathing', 'petting', 'training');
+            petElement.classList.add('sleeping');
+            moodText.textContent = `😴 ${pets[currentPet].sounds.sleep} 好舒服~`;
+            
+            setTimeout(() => {
+                petElement.classList.remove('sleeping');
+                moodText.textContent = '🌞 睡醒啦！精神满满！';
+                addSparkles();
+                addExp(10);
+                updateStatus();
+            }, 3000);
+        };
+
+        const pet = () => {
+            petData.happiness = clamp(petData.happiness + 15, 0, 100);
+            
+            petElement.classList.remove('feeding', 'playing', 'bathing', 'sleeping', 'training');
+            petElement.classList.add('petting');
+            moodText.textContent = `💕 ${pets[currentPet].sounds.pet} 好舒服呀~`;
+            
+            setTimeout(() => {
+                petElement.classList.remove('petting');
+                addSparkles();
+                addExp(3);
+                updateStatus();
+            }, 1200);
+        };
+
+        const train = () => {
+            if (petData.energy < 20) {
+                moodText.textContent = '😴 太累了，休息一下吧...';
+                return;
+            }
+            
+            petData.energy = clamp(petData.energy - 25, 0, 100);
+            petData.hunger = clamp(petData.hunger - 10, 0, 100);
+            
+            petElement.classList.remove('feeding', 'playing', 'bathing', 'sleeping', 'petting');
+            petElement.classList.add('training');
+            moodText.textContent = `🏋️ ${pets[currentPet].sounds.train} 训练中！`;
+            
+            setTimeout(() => {
+                petElement.classList.remove('training');
+                addSparkles();
+                addExp(15);
+                updateStatus();
+            }, 1500);
+        };
+
+        const giveGift = () => {
+            const gifts = ['🍖', '🎾', '🎀', '🎁', '⭐'];
+            const randomGift = gifts[Math.floor(Math.random() * gifts.length)];
+            
+            petData.happiness = clamp(petData.happiness + 20, 0, 100);
+            moodText.textContent = `🎁 ${pets[currentPet].sounds.happy} 收到礼物啦！${randomGift}`;
+            addSparkles();
+            addExp(10);
+            updateStatus();
+        };
+
+        const decisions = [
+            '可以', '不', '好的', '算了吧', '试试吧',
+            '推荐', '不推荐', '去做吧', '再想想', '相信直觉',
+            'Yes', 'No', 'Go', 'Wait', 'Follow your heart',
+            '赞成', '反对', '支持', '否决', '考虑一下',
+            '必须做', '别做了', '试试看', '放弃吧', '听我的',
+            '冲冲冲', '等等看', '行动吧', '冷静点', '相信自己'
+        ];
+
+        const decisionDisplay = document.getElementById('decisionDisplay');
+        const decisionText = document.getElementById('decisionText');
+        let isProcessingDecision = false;
+
+        const handlePetClick = () => {
+            if (isProcessingDecision) return;
+            
+            isProcessingDecision = true;
+            const randomDecision = decisions[Math.floor(Math.random() * decisions.length)];
+            
+            petElement.classList.remove('feeding', 'playing', 'bathing', 'sleeping', 'petting', 'training');
+            petElement.classList.add('happy');
+            
+            decisionText.textContent = `${pets[currentPet].sounds.happy} ${randomDecision}！`;
+            decisionDisplay.classList.remove('fade-out');
+            decisionDisplay.style.display = 'flex';
+            
+            showThought(randomDecision);
+            
+            setTimeout(() => {
+                decisionDisplay.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    decisionDisplay.style.display = 'none';
+                    decisionDisplay.classList.remove('fade-out');
+                    isProcessingDecision = false;
+                }, 300);
+            }, 3500);
+            
+            setTimeout(() => {
+                petElement.classList.remove('happy');
+            }, 2500);
+            
+            addExp(2);
+        };
+
+        petElement.addEventListener('click', handlePetClick);
+
+        const checkinBtn = document.getElementById('checkinBtn');
+        const checkinStreak = document.getElementById('checkinStreak');
+
+        const loadCheckinData = () => {
+            const saved = localStorage.getItem('petCheckin');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return { streak: 0, lastDate: null };
+        };
+
+        const saveCheckinData = (data) => {
+            localStorage.setItem('petCheckin', JSON.stringify(data));
+        };
+
+        const getTodayString = () => {
+            const today = new Date();
+            return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        };
+
+        const checkinData = loadCheckinData();
+        checkinStreak.textContent = `连续 ${checkinData.streak} 天`;
+
+        const isTodayCheckedIn = () => {
+            return checkinData.lastDate === getTodayString();
+        };
+
+        if (isTodayCheckedIn()) {
+            checkinBtn.disabled = true;
+            checkinBtn.innerHTML = `
+                <span class="checkin-icon">✅</span>
+                <span class="checkin-text">今日已打卡</span>
+                <span class="checkin-streak">连续 ${checkinData.streak} 天</span>
+            `;
+        }
+
+        const openCheckinModal = () => {
+            if (isTodayCheckedIn()) return;
+            
+            const modal = document.createElement('div');
+            modal.className = 'checkin-modal';
+            const moods = ['😢', '😔', '😐', '😊', '😍'];
+            
+            modal.innerHTML = `
+                <div class="checkin-content">
+                    <div class="checkin-title">📝 今日心情打卡</div>
+                    <div class="mood-options">
+                        ${moods.map((mood, index) => `<div class="mood-option" data-mood="${index}">${mood}</div>`).join('')}
+                    </div>
+                    <button class="checkin-submit" id="checkinSubmit" disabled>确认打卡</button>
+                    <div class="checkin-success" id="checkinSuccess" style="display: none;">✅ 打卡成功！</div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const moodOptions = modal.querySelectorAll('.mood-option');
+            const submitBtn = modal.querySelector('#checkinSubmit');
+            const successMsg = modal.querySelector('#checkinSuccess');
+            let selectedMood = null;
+
+            moodOptions.forEach((option, index) => {
+                option.addEventListener('click', () => {
+                    moodOptions.forEach(opt => opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                    selectedMood = index;
+                    submitBtn.disabled = false;
+                });
+            });
+
+            submitBtn.addEventListener('click', () => {
+                if (selectedMood === null) return;
+                
+                const today = getTodayString();
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+                let newStreak = checkinData.streak;
+                if (checkinData.lastDate === yesterdayStr) {
+                    newStreak++;
+                } else if (checkinData.lastDate !== today) {
+                    newStreak = 1;
+                }
+
+                checkinData.streak = newStreak;
+                checkinData.lastDate = today;
+                saveCheckinData(checkinData);
+
+                let calendarData = loadAllCheckinData() || {};
+                calendarData[today] = selectedMood;
+                localStorage.setItem('petCheckinData', JSON.stringify(calendarData));
+
+                submitBtn.disabled = true;
+                successMsg.style.display = 'block';
+                
+                const moodTexts = ['难过', '不太开心', '一般般', '开心', '超开心'];
+                showNotification(`🎉 ${pets[currentPet].name}今天${moodTexts[selectedMood]}！连续打卡 ${newStreak} 天！`);
+                
+                petData.happiness = clamp(petData.happiness + 10 + selectedMood * 2, 0, 100);
+                addExp(10);
+                updateStatus();
+                addSparkles();
+
+                checkinBtn.disabled = true;
+                checkinBtn.innerHTML = `
+                    <span class="checkin-icon">✅</span>
+                    <span class="checkin-text">今日已打卡</span>
+                    <span class="checkin-streak">连续 ${newStreak} 天</span>
+                `;
+                checkinStreak.textContent = `连续 ${newStreak} 天`;
+
+                setTimeout(() => modal.remove(), 2000);
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        };
+
+        checkinBtn.addEventListener('click', openCheckinModal);
+
+        const calendarBtn = document.getElementById('calendarBtn');
+        const moodEmojis = ['😢', '😔', '😐', '😊', '😍'];
+
+        const loadAllCheckinData = () => {
+            const saved = localStorage.getItem('petCheckinData');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return {};
+        };
+
+        const saveCheckinRecord = (date, mood) => {
+            const data = loadAllCheckinData();
+            data[date] = mood;
+            localStorage.setItem('petCheckinData', JSON.stringify(data));
+        };
+
+        const openCalendarModal = () => {
+            const today = new Date();
+            let currentYear = today.getFullYear();
+            let currentMonth = today.getMonth();
+
+            const modal = document.createElement('div');
+            modal.className = 'calendar-modal';
+            
+            const renderCalendar = (year, month) => {
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                const startDay = firstDay.getDay();
+
+                const prevMonthLastDay = new Date(year, month, 0).getDate();
+                const nextMonthDays = 42 - (startDay + daysInMonth);
+
+                const checkinData = loadAllCheckinData();
+                const todayStr = getTodayString();
+
+                let html = `
+                    <div class="calendar-header">
+                        <div class="calendar-title">📅 ${year}年${month + 1}月</div>
+                        <div class="calendar-nav">
+                            <button class="nav-btn" id="prevMonth">←</button>
+                            <button class="nav-btn" id="todayBtn">今天</button>
+                            <button class="nav-btn" id="nextMonth">→</button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="calendar-day-name">日</div>
+                        <div class="calendar-day-name">一</div>
+                        <div class="calendar-day-name">二</div>
+                        <div class="calendar-day-name">三</div>
+                        <div class="calendar-day-name">四</div>
+                        <div class="calendar-day-name">五</div>
+                        <div class="calendar-day-name">六</div>
+                `;
+
+                for (let i = startDay - 1; i >= 0; i--) {
+                    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(prevMonthLastDay - i).padStart(2, '0')}`;
+                    const mood = checkinData[dateStr];
+                    html += `<div class="calendar-day other-month">${prevMonthLastDay - i}${mood ? `<span class="mood-badge">${moodEmojis[mood]}</span>` : ''}</div>`;
+                }
+
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                    const isToday = dateStr === todayStr;
+                    const isChecked = checkinData[dateStr] !== undefined;
+                    const mood = checkinData[dateStr];
+                    
+                    let classes = 'calendar-day';
+                    if (isToday) classes += ' today';
+                    if (isChecked) classes += ' checked';
+
+                    html += `<div class="${classes}">${i}${mood !== undefined ? `<span class="mood-badge">${moodEmojis[mood]}</span>` : ''}</div>`;
+                }
+
+                for (let i = 1; i <= nextMonthDays; i++) {
+                    const dateStr = `${year}-${String(month + 2).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                    const mood = checkinData[dateStr];
+                    html += `<div class="calendar-day other-month">${i}${mood ? `<span class="mood-badge">${moodEmojis[mood]}</span>` : ''}</div>`;
+                }
+
+                html += `
+                    </div>
+                    <div class="calendar-summary">
+                        <div class="summary-item">
+                            <div class="summary-value">${getTotalCheckins()}</div>
+                            <div class="summary-label">总打卡</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value">${checkinData.streak || 0}</div>
+                            <div class="summary-label">连续天数</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value">${getMonthCheckins(year, month)}</div>
+                            <div class="summary-label">本月打卡</div>
+                        </div>
+                    </div>
+                    <button class="close-calendar">关闭</button>
+                `;
+
+                modal.innerHTML = `<div class="calendar-content">${html}</div>`;
+
+                modal.querySelector('#prevMonth').addEventListener('click', () => {
+                    if (month === 0) {
+                        renderCalendar(year - 1, 11);
+                    } else {
+                        renderCalendar(year, month - 1);
+                    }
+                });
+
+                modal.querySelector('#nextMonth').addEventListener('click', () => {
+                    if (month === 11) {
+                        renderCalendar(year + 1, 0);
+                    } else {
+                        renderCalendar(year, month + 1);
+                    }
+                });
+
+                modal.querySelector('#todayBtn').addEventListener('click', () => {
+                    renderCalendar(today.getFullYear(), today.getMonth());
+                });
+
+                modal.querySelector('.close-calendar').addEventListener('click', () => modal.remove());
+
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.remove();
+                });
+            };
+
+            const getTotalCheckins = () => {
+                const data = loadAllCheckinData();
+                return Object.keys(data).filter(k => k !== 'streak').length;
+            };
+
+            const getMonthCheckins = (year, month) => {
+                const data = loadAllCheckinData();
+                const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+                return Object.keys(data).filter(k => k.startsWith(monthStr) && k !== 'streak').length;
+            };
+
+            renderCalendar(currentYear, currentMonth);
+            document.body.appendChild(modal);
+        };
+
+        calendarBtn.addEventListener('click', openCalendarModal);
+
+        feedBtn.addEventListener('click', feed);
+        playBtn.addEventListener('click', play);
+        batheBtn.addEventListener('click', bathe);
+        sleepBtn.addEventListener('click', sleep);
+        petBtn.addEventListener('click', pet);
+        trainBtn.addEventListener('click', train);
+        giftBtn.addEventListener('click', giveGift);
+
+        setInterval(() => {
+            petData.hunger = clamp(petData.hunger - 0.8, 0, 100);
+            petData.happiness = clamp(petData.happiness - 0.4, 0, 100);
+            petData.cleanliness = clamp(petData.cleanliness - 0.6, 0, 100);
+            petData.energy = clamp(petData.energy - 0.5, 0, 100);
+            updateStatus();
+        }, 5000);
+
+        const randomEvents = [
+            { chance: 0.02, text: (name) => `${name}找到了一个玩具！🎾`, effect: { happiness: 10 } },
+            { chance: 0.02, text: (name) => `${name}发现了零食！🍖`, effect: { hunger: 15 } },
+            { chance: 0.01, text: (name) => `${name}做了一个美梦！💭`, effect: { energy: 15 } },
+            { chance: 0.01, text: (name) => `${name}遇到了好朋友！🐾`, effect: { happiness: 15 } }
+        ];
+
+        setInterval(() => {
+            randomEvents.forEach(event => {
+                if (Math.random() < event.chance) {
+                    showNotification(event.text(pets[currentPet].name));
+                    Object.keys(event.effect).forEach(key => {
+                        petData[key] = clamp(petData[key] + event.effect[key], 0, 100);
+                    });
+                    updateStatus();
+                }
+            });
+        }, 10000);
+
+        const initPet = () => {
+            petElement.textContent = pets[currentPet].emoji;
+            petNameElement.textContent = `快来和可爱的小${pets[currentPet].name}一起玩耍吧！`;
+            addSparkles();
+        };
+
+        initPet();
+        updateStatus();
+    </script>
+</body>
+</html>
