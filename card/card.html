@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽卡游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
+        }
+
+        .money-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 25px;
+            border-radius: 30px;
+            margin-bottom: 20px;
+        }
+
+        .money-icon {
+            font-size: 1.5rem;
+        }
+
+        .money-amount {
+            color: #fbbf24;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 250px;
+            max-width: 900px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            width: 140px;
+            height: 210px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front,
+        .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 100;
+            pointer-events: none;
+            margin-bottom: 10px;
+        }
+
+        .card-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .card:hover .card-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .card-front {
+            background: url('IMG_2330.PNG') center/contain no-repeat;
+            background-color: #c1c1c1;
+            border: 3px solid #a0a0a0;
+        }
+
+        .card-back {
+            background: #fff;
+            transform: rotateY(180deg);
+        }
+
+        .card-front .card-content {
+            font-size: 3rem;
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(100, 200, 255, 0.4);
+        }
+
+        #draw-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        #reset-btn {
+            background: #ff6b6b;
+            color: #fff;
+        }
+
+        .result-message {
+            margin-top: 20px;
+            padding: 15px 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1.1rem;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .result-message.show {
+            opacity: 1;
+        }
+
+        .rarity-common { color: #9ca3af; }
+        .rarity-rare { color: #3b82f6; }
+        .rarity-epic { color: #a855f7; }
+        .rarity-legendary { color: #f59e0b; }
+
+        #album-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+        }
+
+        .album-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .album-overlay.show {
+            display: flex;
+        }
+
+        .album-container {
+            background: #1a1a2e;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .album-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .album-header h2 {
+            color: #fff;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .album-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .album-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .album-stats {
+            display: flex;
+            gap: 30px;
+            padding: 15px 25px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .album-content {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            overflow-y: auto;
+            max-height: 50vh;
+        }
+
+        .album-card {
+            aspect-ratio: 2/3;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+
+        .album-card:hover {
+            transform: scale(1.05);
+            border-color: rgba(100, 200, 255, 0.5);
+        }
+
+        .album-card.owned {
+            background-size: cover;
+            background-position: center;
+        }
+
+        .album-card.locked {
+            background: linear-gradient(135deg, #2d2d44 0%, #1a1a2e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .album-card.locked::after {
+            content: '?';
+            font-size: 2rem;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .album-card .rarity-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .album-card .count-badge {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+        }
+
+        .rarity-badge.common { background: #9ca3af; }
+        .rarity-badge.rare { background: #3b82f6; }
+        .rarity-badge.epic { background: #a855f7; }
+        .rarity-badge.legendary { background: #f59e0b; }
+
+        .card-detail-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .card-detail-overlay.show {
+            display: flex;
+        }
+
+        .card-detail {
+            background: #1a1a2e;
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .card-detail-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card-detail-rarity {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .card-detail-price {
+            color: #fbbf24;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .card-detail-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .card-detail-close {
+            padding: 10px 30px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .card-detail-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .card-detail-sell {
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .card-detail-sell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        #sell-card-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #fff;
+        }
+
+        #keep-card-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎴 抽卡游戏</h1>
+    
+    <div class="money-display">
+        <span class="money-icon">💰</span>
+        <span class="money-amount" id="money-display">0</span>
+    </div>
+    
+    <div class="game-container" id="game-container"></div>
+    
+    <div class="card-actions" id="card-actions" style="display: none;">
+        <button id="sell-card-btn">💰 直接出售</button>
+        <button id="keep-card-btn">📥 放入卡册</button>
+    </div>
+    
+    <div class="controls">
+        <button id="draw-btn">抽一张卡</button>
+        <button id="reset-btn">重置</button>
+        <button id="album-btn">📖 卡册</button>
+    </div>
+    
+    <div class="result-message" id="result-message"></div>
+
+    <div class="album-overlay" id="album-overlay">
+        <div class="album-container">
+            <div class="album-header">
+                <h2>📖 我的卡册</h2>
+                <button class="album-close" onclick="closeAlbum()">×</button>
+            </div>
+            <div class="album-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">已收集</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-common">0</div>
+                    <div class="stat-label">普通</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-rare">0</div>
+                    <div class="stat-label">稀有</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-epic">0</div>
+                    <div class="stat-label">史诗</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-legendary">0</div>
+                    <div class="stat-label">传说</div>
+                </div>
+            </div>
+            <div class="album-content" id="album-content"></div>
+        </div>
+    </div>
+
+    <div class="card-detail-overlay" id="card-detail-overlay">
+        <div class="card-detail">
+            <img src="" alt="卡片详情" class="card-detail-image" id="card-detail-image">
+            <div class="card-detail-rarity" id="card-detail-rarity"></div>
+            <div class="card-detail-price" id="card-detail-price"></div>
+            <div class="card-detail-actions">
+                <button class="card-detail-close" onclick="closeCardDetail()">关闭</button>
+                <button class="card-detail-sell" onclick="sellCurrentCard()">出售</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cards = [
+            { image: '微信图片_20260523185848_8150_21.jpg', rarity: 'common' },
+            { image: '微信图片_20260523185908_8167_21.jpg', rarity: 'legendary' },
+            { image: '微信图片_20260523185850_8151_21.jpg', rarity: 'common' },
+            { image: '微信图片_20260523185851_8152_21.jpg', rarity: 'common' },
+            { image: '微信图片_20260523185852_8153_21.jpg', rarity: 'common' },
+            { image: '微信图片_20260523185854_8155_21.jpg', rarity: 'common' },
+            { image: '微信图片_20260523185853_8154_21.jpg', rarity: 'common' },
+            { image: '微信图片_20260523185855_8156_21.jpg', rarity: 'rare' },
+            { image: '微信图片_20260523185857_8157_21.jpg', rarity: 'rare' },
+            { image: '微信图片_20260523185858_8158_21.jpg', rarity: 'rare' },
+            { image: '微信图片_20260523185859_8159_21.jpg', rarity: 'rare' },
+            { image: '微信图片_20260523185900_8160_21.jpg', rarity: 'rare' },
+            { image: '微信图片_20260523185901_8161_21.jpg', rarity: 'epic' },
+            { image: '微信图片_20260523185902_8162_21.jpg', rarity: 'legendary' },
+            { image: '微信图片_20260523185905_8164_21.jpg', rarity: 'epic' },
+            { image: '微信图片_20260523185906_8165_21.jpg', rarity: 'epic' },
+            { image: '微信图片_20260523185907_8166_21.jpg', rarity: 'epic' }
+        ];
+
+        const rarityWeights = {
+            common: 50,
+            rare: 30,
+            epic: 15,
+            legendary: 5
+        };
+
+        const rarityText = {
+            common: '普通',
+            rare: '稀有',
+            epic: '史诗',
+            legendary: '传说'
+        };
+
+        let cardWidth = 140;
+        let cardHeight = 210;
+
+        const DRAW_COST = 100;
+        
+        const sellPrices = {
+            common: 50,
+            rare: 150,
+            epic: 500,
+            legendary: 2000
+        };
+
+        let collectedCards = JSON.parse(localStorage.getItem('collectedCards') || '{}');
+        let money = parseInt(localStorage.getItem('money') || '1000');
+        
+        let currentSelectedCard = null;
+
+        function updateMoneyDisplay() {
+            document.getElementById('money-display').textContent = money;
+        }
+
+        function saveMoney() {
+            localStorage.setItem('money', money.toString());
+        }
+
+        const img = new Image();
+        img.onload = function() {
+            const ratio = this.height / this.width;
+            cardHeight = Math.round(cardWidth * ratio);
+            document.querySelector('.card')?.style.setProperty('height', cardHeight + 'px');
+        };
+        img.src = 'IMG_2330.PNG';
+
+        function getRandomCard() {
+            const index = Math.floor(Math.random() * cards.length);
+            return cards[index];
+        }
+
+        function getRandomRarity() {
+            const totalWeight = Object.values(rarityWeights).reduce((a, b) => a + b, 0);
+            let random = Math.random() * totalWeight;
+            
+            for (const [rarity, weight] of Object.entries(rarityWeights)) {
+                random -= weight;
+                if (random <= 0) {
+                    return rarity;
+                }
+            }
+            return 'common';
+        }
+
+        function createCard() {
+            const cardData = getRandomCard();
+            const imageSrc = cardData.image;
+            const rarity = cardData.rarity;
+            const price = sellPrices[rarity];
+            
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.height = cardHeight + 'px';
+            card.dataset.rarity = rarity;
+            card.dataset.image = imageSrc;
+            card.dataset.price = price;
+            card.dataset.firstFlip = 'false';
+            card.innerHTML = `
+                <div class="card-tooltip" style="display: none;">
+                    <div>品质: <span class="rarity-${rarity}">${rarityText[rarity]}</span></div>
+                    <div>价值: <span style="color: #fbbf24;">💰 ${price}</span></div>
+                </div>
+                <div class="card-inner">
+                    <div class="card-front"></div>
+                    <div class="card-back" style="background: url('${imageSrc}') center/cover;"></div>
+                </div>
+            `;
+            
+            card.addEventListener('click', function() {
+                card.classList.toggle('flipped');
+                
+                if (card.dataset.firstFlip === 'false' && card.classList.contains('flipped')) {
+                    card.dataset.firstFlip = 'true';
+                    const tooltip = card.querySelector('.card-tooltip');
+                    if (tooltip) tooltip.style.display = 'block';
+                    
+                    const rarity = card.dataset.rarity;
+                    resultMessage.textContent = `恭喜获得 ${rarityText[rarity]}卡！`;
+                    resultMessage.classList.add('show');
+                    cardActions.style.display = 'flex';
+                    
+                    setTimeout(() => {
+                        resultMessage.classList.remove('show');
+                    }, 2000);
+                }
+            });
+            
+            return card;
+        }
+
+        function flipCard(card) {
+            card.classList.add('flipped');
+        }
+
+        function saveCollectedCard(imageSrc, rarity) {
+            if (!collectedCards[imageSrc]) {
+                collectedCards[imageSrc] = {
+                    rarity: rarity,
+                    count: 1,
+                    collectedAt: new Date().toISOString()
+                };
+            } else {
+                collectedCards[imageSrc].count++;
+            }
+            localStorage.setItem('collectedCards', JSON.stringify(collectedCards));
+        }
+
+        function updateAlbumStats() {
+            const stats = { common: 0, rare: 0, epic: 0, legendary: 0 };
+            let total = 0;
+            
+            cards.forEach(card => {
+                const cardInfo = collectedCards[card.image];
+                if (cardInfo) {
+                    const count = cardInfo.count || 1;
+                    stats[card.rarity] += count;
+                    total += count;
+                }
+            });
+            
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-common').textContent = stats.common;
+            document.getElementById('stat-rare').textContent = stats.rare;
+            document.getElementById('stat-epic').textContent = stats.epic;
+            document.getElementById('stat-legendary').textContent = stats.legendary;
+        }
+
+        function renderAlbum() {
+            const albumContent = document.getElementById('album-content');
+            albumContent.innerHTML = '';
+            
+            const rarityOrder = { legendary: 0, epic: 1, rare: 2, common: 3 };
+            
+            const sortedCards = [...cards].sort((a, b) => {
+                return rarityOrder[a.rarity] - rarityOrder[b.rarity];
+            });
+            
+            sortedCards.forEach((card, index) => {
+                const imageSrc = card.image;
+                const cardInfo = collectedCards[imageSrc];
+                const albumCard = document.createElement('div');
+                const fixedRarity = card.rarity;
+                
+                if (cardInfo) {
+                    albumCard.className = 'album-card owned';
+                    albumCard.style.backgroundImage = `url('${imageSrc}')`;
+                    const count = cardInfo.count || 1;
+                    albumCard.innerHTML = `
+                        <span class="rarity-badge ${fixedRarity}">${rarityText[fixedRarity]}</span>
+                        <span class="count-badge">${count}</span>
+                    `;
+                    albumCard.onclick = () => openCardDetail(imageSrc, fixedRarity);
+                } else {
+                    albumCard.className = 'album-card locked';
+                }
+                
+                albumContent.appendChild(albumCard);
+            });
+            
+            updateAlbumStats();
+        }
+
+        function openAlbum() {
+            renderAlbum();
+            document.getElementById('album-overlay').classList.add('show');
+        }
+
+        function closeAlbum() {
+            document.getElementById('album-overlay').classList.remove('show');
+        }
+
+        function openCardDetail(imageSrc, rarity) {
+            currentSelectedCard = { imageSrc, rarity };
+            document.getElementById('card-detail-image').src = imageSrc;
+            document.getElementById('card-detail-rarity').textContent = rarityText[rarity];
+            document.getElementById('card-detail-rarity').className = `card-detail-rarity ${rarity}`;
+            document.getElementById('card-detail-price').textContent = `出售价格: 💰 ${sellPrices[rarity]}`;
+            document.getElementById('card-detail-overlay').classList.add('show');
+        }
+
+        function closeCardDetail() {
+            document.getElementById('card-detail-overlay').classList.remove('show');
+            currentSelectedCard = null;
+        }
+
+        function sellCurrentCard() {
+            if (!currentSelectedCard) return;
+            
+            const { imageSrc, rarity } = currentSelectedCard;
+            const price = sellPrices[rarity];
+            
+            money += price;
+            saveMoney();
+            updateMoneyDisplay();
+            
+            if (collectedCards[imageSrc]) {
+                const currentCount = collectedCards[imageSrc].count || 1;
+                if (currentCount > 1) {
+                    collectedCards[imageSrc].count = currentCount - 1;
+                } else {
+                    delete collectedCards[imageSrc];
+                }
+                localStorage.setItem('collectedCards', JSON.stringify(collectedCards));
+            }
+            
+            closeCardDetail();
+            renderAlbum();
+            
+            resultMessage.textContent = `💰 成功出售！获得 ${price} 金币`;
+            resultMessage.classList.add('show');
+            setTimeout(() => {
+                resultMessage.classList.remove('show');
+            }, 2000);
+        }
+
+        const gameContainer = document.getElementById('game-container');
+        const drawBtn = document.getElementById('draw-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const albumBtn = document.getElementById('album-btn');
+        const cardActions = document.getElementById('card-actions');
+        const sellCardBtn = document.getElementById('sell-card-btn');
+        const keepCardBtn = document.getElementById('keep-card-btn');
+        const resultMessage = document.getElementById('result-message');
+
+        let lastDrawnCard = null;
+
+        drawBtn.addEventListener('click', () => {
+            if (lastDrawnCard) {
+                resultMessage.textContent = '请先处理当前卡牌（出售或放入卡册）';
+                resultMessage.classList.add('show');
+                setTimeout(() => {
+                    resultMessage.classList.remove('show');
+                }, 2000);
+                return;
+            }
+            
+            if (money < DRAW_COST) {
+                resultMessage.textContent = '💰 金币不足！需要 ' + DRAW_COST + ' 金币';
+                resultMessage.classList.add('show');
+                setTimeout(() => {
+                    resultMessage.classList.remove('show');
+                }, 2000);
+                return;
+            }
+            
+            money -= DRAW_COST;
+            saveMoney();
+            updateMoneyDisplay();
+            
+            gameContainer.innerHTML = '';
+            cardActions.style.display = 'none';
+            
+            const card = createCard();
+            gameContainer.appendChild(card);
+            lastDrawnCard = card;
+            
+            resultMessage.textContent = '点击卡牌查看内容！';
+            resultMessage.classList.add('show');
+            
+            setTimeout(() => {
+                resultMessage.classList.remove('show');
+            }, 2000);
+        });
+
+        sellCardBtn.addEventListener('click', () => {
+            if (!lastDrawnCard) return;
+            
+            const rarity = lastDrawnCard.dataset.rarity;
+            const price = sellPrices[rarity];
+            
+            money += price;
+            saveMoney();
+            updateMoneyDisplay();
+            
+            gameContainer.innerHTML = '';
+            cardActions.style.display = 'none';
+            lastDrawnCard = null;
+            
+            resultMessage.textContent = `💰 成功出售！获得 ${price} 金币`;
+            resultMessage.classList.add('show');
+            setTimeout(() => {
+                resultMessage.classList.remove('show');
+            }, 2000);
+        });
+
+        keepCardBtn.addEventListener('click', () => {
+            if (!lastDrawnCard) return;
+            
+            const imageSrc = lastDrawnCard.dataset.image;
+            const rarity = lastDrawnCard.dataset.rarity;
+            
+            saveCollectedCard(imageSrc, rarity);
+            
+            gameContainer.innerHTML = '';
+            cardActions.style.display = 'none';
+            lastDrawnCard = null;
+            
+            resultMessage.textContent = `📥 已放入卡册！`;
+            resultMessage.classList.add('show');
+            setTimeout(() => {
+                resultMessage.classList.remove('show');
+            }, 2000);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            gameContainer.innerHTML = '';
+            cardActions.style.display = 'none';
+            lastDrawnCard = null;
+            resultMessage.classList.remove('show');
+        });
+
+        albumBtn.addEventListener('click', openAlbum);
+
+        document.getElementById('album-overlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('album-overlay')) {
+                closeAlbum();
+            }
+        });
+
+        document.getElementById('card-detail-overlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('card-detail-overlay')) {
+                closeCardDetail();
+            }
+        });
+
+        updateMoneyDisplay();
+    </script>
+</body>
+</html>
