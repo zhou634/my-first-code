@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050508">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="孤刃寻她 · THE LONELY BLADE —— 一款单文件、纯 Canvas 的横版像素寻途动作游戏。孤刃忍者踏遍回廊，只为寻回被掳走的心上人。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%2307060a'/%3E%3Cpath d='M5 23 27 7' stroke='%23d7e7ff' stroke-width='2'/%3E%3Cpath d='M7 21 3 24' stroke='%23c7a268' stroke-width='2'/%3E%3Crect x='10' y='13' width='11' height='7' rx='3' fill='%230b0b10'/%3E%3Crect x='13' y='15' width='5' height='2' fill='%23ff354d'/%3E%3C/svg%3E">
+<title>孤刃寻她 · THE LONELY BLADE</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <main id="stage">
+    <canvas id="game" width="480" height="270" aria-label="孤刃寻她：像素寻途动作游戏画面"></canvas>
+
+    <div class="fx-layer fx-scanlines" aria-hidden="true"></div>
+    <div class="fx-layer fx-grain" aria-hidden="true"></div>
+    <div class="fx-layer fx-vignette" aria-hidden="true"></div>
+    <div class="fx-layer fx-frame" aria-hidden="true"></div>
+
+    <section id="hud" class="hud is-hidden" aria-label="状态栏">
+      <div class="hud-left">
+        <div class="player-plate">
+          <div class="crest" aria-hidden="true"><canvas id="portraitCanvas" width="44" height="44"></canvas></div>
+          <div class="vitals">
+            <div class="vitals-top">
+              <span class="name">孤 刃</span>
+              <span class="jp">KOHJIN</span>
+              <span id="hpText" class="hp-text">100 / 100</span>
+            </div>
+            <div class="hp-track" id="hpTrack">
+              <div class="hp-lag" id="hpLag"></div>
+              <div class="hp-fill" id="hpFill"></div>
+              <div class="notches"></div>
+            </div>
+            <div class="vitals-bottom">
+              <span><i class="dot"></i><kbd class="hud-kbd">K</kbd>振刀 <b id="deflectCount">00</b></span>
+              <span id="killCount">斩 00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hud-center">
+        <div class="combo-hud" id="comboHud">
+          <span class="combo-num" id="comboNum">2</span>
+          <span class="combo-series"><span class="combo-label">连 斩</span><span class="combo-en">HIT COMBO</span></span>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="wave-label">
+          <span class="wave-kicker">寻 她</span>
+          <strong id="waveRoman">I</strong><span class="slash">/</span><span>III</span>
+        </div>
+        <div class="enemy-pips" id="enemyPips" aria-label="剩余敌人"></div>
+      </div>
+    </section>
+
+    <div class="announce" id="announce" aria-live="polite">
+      <div class="rule"><i></i></div>
+      <div class="zh" id="announceZh"></div>
+      <div class="en" id="announceEn"></div>
+      <div class="sub" id="announceSub"></div>
+    </div>
+
+    <div class="parry-callout" id="parryCallout" aria-hidden="true">
+      <span class="parry-zh">振 刀</span>
+      <span class="parry-en">DEFLECT</span>
+      <span class="parry-burst"></span>
+    </div>
+
+    <div class="hint-bar" id="hintBar">
+      <kbd id="hintKey">K</kbd>
+      <span class="hint-text"><b id="hintTitle">振刀</b><small id="hintSub">警示符骤亮、爪锋将落时按下，白刃反弹</small></span>
+    </div>
+
+    <button class="btn-sound" id="muteBtn" aria-label="开启或关闭声音" title="声音 M">
+      <span class="on">♪</span><span class="off">×</span>
+    </button>
+
+    <section id="titleScreen" class="screen screen-title" aria-label="标题画面">
+      <div class="title-topline">
+        <span>残卷 · 孤刃</span><span class="cinema-line"></span><span>The Lonely Blade / 长夜</span>
+      </div>
+      <div class="title-main">
+        <div class="title-eyebrow"><span class="seal">刃</span><span>孤刃 · 寻她</span></div>
+        <h1 class="game-title" aria-label="孤刃寻她">
+          <span class="char">孤</span><span class="char">刃</span><span class="char">寻</span><span class="char">她</span>
+          <span class="title-slash" aria-hidden="true"></span>
+        </h1>
+        <div class="title-en">The Lonely Blade · Seeking Her</div>
+        <p class="title-tag">刃冷心热，万劫只为寻她。</p>
+        <div class="title-actions">
+          <button class="btn-primary" id="startBtn">
+            <span class="btn-mark">◆</span><span>踏上寻途</span><span class="btn-en">ENTER</span>
+          </button>
+          <div class="audio-note">耳机体验更佳<br>建议使用键盘操作</div>
+        </div>
+        <div class="control-strip" aria-label="操作说明">
+          <div class="ctrl"><kbd>A</kbd><kbd>D</kbd><span>移动</span></div>
+          <div class="ctrl"><kbd>SPACE</kbd><span>跳跃</span></div>
+          <div class="ctrl"><kbd>SHIFT</kbd><span>冲刺</span></div>
+          <div class="ctrl"><kbd>J</kbd><span>连斩</span></div>
+          <div class="ctrl"><kbd>U</kbd><span>重攻击</span></div>
+          <div class="ctrl accent"><kbd>K</kbd><span>振刀</span></div>
+          <div class="ctrl"><kbd>ESC</kbd><span>暂停</span></div>
+        </div>
+      </div>
+      <div class="title-side" aria-hidden="true">寻 她 千 度</div>
+      <div class="title-footer">
+        <div class="tip">
+          <span class="tip-mark">◆</span>
+          <span>紫色怪物抬爪/蓄力时会亮起<b>警示符</b>。在警示符骤亮、<b>爪锋将落</b>时按下 <b>K</b>，<br>可振开攻击、令其失衡；振刀也能斩碎<b>绿色的冲击波</b>。</span>
+        </div>
+        <div class="credit">Pixel Dungeon Action · v1.0</div>
+      </div>
+    </section>
+
+    <section id="pauseScreen" class="screen screen-pause is-hidden" aria-label="暂停">
+      <div class="pause-card">
+        <h2>暂 停</h2>
+        <div class="pause-sub">PAUSED · THE HALL HOLDS ITS BREATH</div>
+        <div class="pause-controls">
+          <div class="row"><span>移动</span><span><kbd>A</kbd> <kbd>D</kbd></span></div>
+          <div class="row"><span>跳跃</span><span><kbd>SPACE</kbd></span></div>
+          <div class="row"><span>冲刺 / 闪身</span><span><kbd>SHIFT</kbd></span></div>
+          <div class="row"><span>连斩</span><span><kbd>J</kbd></span></div>
+          <div class="row"><span>振刀</span><span><kbd>K</kbd></span></div>
+          <div class="row"><span>声音开关</span><span><kbd>M</kbd></span></div>
+        </div>
+        <div class="pause-actions">
+          <button class="btn-primary" id="resumeBtn"><span class="btn-mark">◆</span><span>继续</span><span class="btn-en">RESUME</span></button>
+          <button class="btn-secondary" id="pauseQuitBtn">返回标题</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="deathScreen" class="screen screen-end is-hidden" aria-label="战败">
+      <div class="end-card">
+        <div class="end-kicker">The path runs cold</div>
+        <h2 class="end-title end-title-death">灯 熄</h2>
+        <div class="end-rule"><span>You fell before the end</span></div>
+        <p class="end-quote">“她还在前面等我……我不能停在这里。”</p>
+        <div class="stat-grid">
+          <div class="stat"><span class="num" id="deathKills">0</span><span class="label">斩 杀</span></div>
+          <div class="stat"><span class="num" id="deathCombo">0</span><span class="label">最高连斩</span></div>
+          <div class="stat"><span class="num" id="deathDeflects">0</span><span class="label">振 刀</span></div>
+          <div class="stat"><span class="num" id="deathWave">I</span><span class="label">追寻之路</span></div>
+        </div>
+        <div class="end-actions">
+          <button class="btn-primary" id="retryBtn"><span class="btn-mark">◆</span><span>再寻归途</span><span class="btn-en">RETRY</span></button>
+          <button class="btn-secondary" id="deathTitleBtn">返回标题</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="victoryScreen" class="screen screen-end is-hidden" aria-label="通关">
+      <div class="end-card">
+        <div class="end-kicker">The search is over</div>
+        <h2 class="end-title end-title-victory">终 见</h2>
+        <div class="end-rule"><span>She was waiting at the end</span></div>
+        <p class="end-quote">“回廊尽头亮起灯火——她转过身，还认得我。”</p>
+        <div class="stat-grid">
+          <div class="stat"><span class="num" id="winKills">0</span><span class="label">斩 杀</span></div>
+          <div class="stat"><span class="num" id="winCombo">0</span><span class="label">最高连斩</span></div>
+          <div class="stat"><span class="num" id="winDeflects">0</span><span class="label">振 刀</span></div>
+          <div class="stat"><span class="num" id="winTime">0:00</span><span class="label">用 时</span></div>
+        </div>
+        <div class="end-actions">
+          <button class="btn-primary" id="winRetryBtn"><span class="btn-mark">◆</span><span>携她再行</span><span class="btn-en">AGAIN</span></button>
+          <button class="btn-secondary" id="winTitleBtn">返回标题</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
